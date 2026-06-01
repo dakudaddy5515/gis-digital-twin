@@ -1,0 +1,817 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Main Dashboard | GIS Digital Twin & Analyser</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+
+    body{
+      min-height:100vh;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:#ffffff;
+      color:#0f172a;
+      overflow-x:hidden;
+    }
+
+    .page{
+      min-height:100vh;
+      background:
+        radial-gradient(circle at 12% 10%, rgba(59,130,246,.08), transparent 26%),
+        radial-gradient(circle at 88% 18%, rgba(14,165,233,.10), transparent 28%),
+        linear-gradient(180deg,#ffffff,#f8fbff);
+      position:relative;
+    }
+
+    .page::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      opacity:.045;
+      pointer-events:none;
+      background-image:
+        linear-gradient(#0f172a 1px, transparent 1px),
+        linear-gradient(90deg,#0f172a 1px, transparent 1px);
+      background-size:48px 48px;
+      z-index:0;
+    }
+
+    .topbar{
+      position:sticky;
+      top:0;
+      z-index:20;
+      height:76px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 34px;
+      background:rgba(255,255,255,.82);
+      backdrop-filter:blur(16px);
+      -webkit-backdrop-filter:blur(16px);
+      border-bottom:1px solid #e2e8f0;
+      box-shadow:0 8px 28px rgba(15,23,42,.06);
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:14px;
+    }
+
+    .brand-logo{
+      width:46px;
+      height:46px;
+      border-radius:15px;
+      background:linear-gradient(135deg,#2563eb,#0ea5e9);
+      color:#fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow:0 8px 24px rgba(37,99,235,.25);
+      position:relative;
+      font-size:23px;
+    }
+
+    .brand-logo::after{
+      content:"";
+      position:absolute;
+      right:-3px;
+      top:-3px;
+      width:14px;
+      height:14px;
+      background:#10b981;
+      border:3px solid #fff;
+      border-radius:50%;
+    }
+
+    .brand h1{
+      font-size:18px;
+      line-height:1.1;
+      font-weight:800;
+      letter-spacing:-.35px;
+      color:#0f172a;
+    }
+
+    .brand p{
+      margin-top:3px;
+      color:#64748b;
+      font-size:12px;
+      font-weight:600;
+    }
+
+    .actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      height:42px;
+      padding:0 16px;
+      border-radius:13px;
+      text-decoration:none;
+      border:1px solid #e2e8f0;
+      background:#ffffff;
+      color:#334155;
+      font-size:13px;
+      font-weight:800;
+      box-shadow:0 8px 22px rgba(15,23,42,.05);
+      transition:.18s;
+    }
+
+    .btn:hover{
+      transform:translateY(-1px);
+      box-shadow:0 12px 28px rgba(15,23,42,.10);
+    }
+
+    .btn.primary{
+      border:0;
+      color:#fff;
+      background:linear-gradient(90deg,#2563eb,#0ea5e9);
+      box-shadow:0 10px 25px rgba(37,99,235,.22);
+    }
+
+    .wrap{
+      position:relative;
+      z-index:1;
+      width:min(1420px,100%);
+      margin:0 auto;
+      padding:30px;
+    }
+
+    .hero{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 360px;
+      gap:22px;
+      margin-bottom:22px;
+    }
+
+    .hero-card{
+      position:relative;
+      overflow:hidden;
+      background:rgba(255,255,255,.86);
+      border:1px solid #e2e8f0;
+      border-radius:28px;
+      padding:30px;
+      box-shadow:0 20px 50px rgba(15,23,42,.08);
+      left: 20%;
+    }
+
+    .hero-card::after{
+      content:"";
+      position:absolute;
+      right:-60px;
+      top:-80px;
+      width:250px;
+      height:250px;
+      border-radius:50%;
+      background:radial-gradient(circle,rgba(37,99,235,.12),transparent 65%);
+    }
+
+    .eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:8px 12px;
+      border-radius:999px;
+      background:#eff6ff;
+      color:#1d4ed8;
+      border:1px solid #dbeafe;
+      font-size:12px;
+      font-weight:800;
+      margin-bottom:16px;
+    }
+
+    .hero h2{
+      font-size:34px;
+      line-height:1.12;
+      letter-spacing:-1px;
+      color:#0f172a;
+      max-width:720px;
+    }
+
+    .hero p{
+      margin-top:12px;
+      color:#64748b;
+      font-size:14px;
+      line-height:1.6;
+      max-width:760px;
+    }
+
+    .system-card{
+      background:rgba(255,255,255,.88);
+      border:1px solid #e2e8f0;
+      border-radius:28px;
+      padding:22px;
+      box-shadow:0 20px 50px rgba(15,23,42,.08);
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      min-height:190px;
+    }
+
+    .time-box{
+      text-align:center;
+      padding:14px;
+      border-radius:18px;
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+    }
+
+    .time-text{
+      font-size:26px;
+      font-weight:850;
+      letter-spacing:-.8px;
+      color:#0f172a;
+    }
+
+    .date-text{
+      color:#64748b;
+      font-size:12px;
+      font-weight:700;
+      margin-top:4px;
+    }
+
+    .status-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      margin-top:14px;
+      padding:10px 12px;
+      border-radius:14px;
+      background:#ecfdf5;
+      color:#047857;
+      border:1px solid #bbf7d0;
+      font-size:12px;
+      font-weight:900;
+      justify-content:center;
+    }
+
+    .stats-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:16px;
+    }
+
+    .stat-card{
+      position:relative;
+      overflow:hidden;
+      background:#ffffff;
+      border:1px solid #e2e8f0;
+      border-radius:22px;
+      padding:18px;
+      box-shadow:0 14px 34px rgba(15,23,42,.07);
+      transition:.18s;
+      min-height:126px;
+    }
+
+    .stat-card:hover{
+      transform:translateY(-2px);
+      box-shadow:0 20px 44px rgba(15,23,42,.10);
+    }
+
+    .stat-card::after{
+      content:"";
+      position:absolute;
+      right:-30px;
+      top:-30px;
+      width:96px;
+      height:96px;
+      border-radius:50%;
+      background:var(--soft,#eff6ff);
+    }
+
+    .stat-head{
+      position:relative;
+      z-index:1;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+
+    .stat-icon{
+      width:42px;
+      height:42px;
+      border-radius:14px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:var(--soft,#eff6ff);
+      color:var(--accent,#2563eb);
+      font-size:20px;
+      flex:0 0 auto;
+    }
+
+    .stat-label{
+      position:relative;
+      z-index:1;
+      margin-top:16px;
+      color:#64748b;
+      font-size:11px;
+      font-weight:850;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .stat-value{
+      position:relative;
+      z-index:1;
+      margin-top:5px;
+      font-size:34px;
+      line-height:1;
+      font-weight:900;
+      letter-spacing:-1px;
+      color:#0f172a;
+    }
+
+    .hospital-split{
+      position:relative;
+      z-index:1;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:9px;
+      margin-top:14px;
+    }
+
+    .hospital-split div{
+      padding:9px 10px;
+      border-radius:14px;
+      background:#f8fafc;
+      border:1px solid #e2e8f0;
+    }
+
+    .hospital-split span{
+      display:block;
+      color:#64748b;
+      font-size:10px;
+      font-weight:850;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      margin-bottom:3px;
+    }
+
+    .hospital-split strong{
+      color:#0f172a;
+      font-size:18px;
+      font-weight:900;
+    }
+
+    .section{
+      margin-top:22px;
+      background:#ffffff;
+      border:1px solid #e2e8f0;
+      border-radius:26px;
+      padding:22px;
+      box-shadow:0 18px 42px rgba(15,23,42,.08);
+    }
+
+    .section-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:16px;
+      margin-bottom:16px;
+    }
+
+    .section h2{
+      font-size:20px;
+      color:#0f172a;
+      letter-spacing:-.35px;
+    }
+
+    .section small{
+      color:#64748b;
+      font-size:13px;
+      display:block;
+      margin-top:3px;
+    }
+
+    .table-count-pill{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:9px 12px;
+      border-radius:999px;
+      background:#eff6ff;
+      color:#1d4ed8;
+      border:1px solid #dbeafe;
+      font-size:12px;
+      font-weight:900;
+      white-space:nowrap;
+    }
+
+    .manual-table-wrap{
+      width:100%;
+      overflow-x:auto;
+      border:1px solid #e2e8f0;
+      border-radius:18px;
+      background:#ffffff;
+    }
+
+    .recent-manual-table{
+      width:100%;
+      border-collapse:separate;
+      border-spacing:0;
+      min-width:860px;
+    }
+
+    .recent-manual-table thead th{
+      background:#f8fafc;
+      color:#475569;
+      border-bottom:1px solid #e2e8f0;
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+      padding:14px 14px;
+      text-align:left;
+      white-space:nowrap;
+    }
+
+    .recent-manual-table td{
+      padding:14px 14px;
+      border-bottom:1px solid #f1f5f9;
+      color:#334155;
+      font-size:13px;
+      vertical-align:middle;
+    }
+
+    .recent-manual-table tbody tr:hover{
+      background:#f8fbff;
+    }
+
+    .recent-manual-table tbody tr:last-child td{
+      border-bottom:0;
+    }
+
+    .sn-cell{
+      width:64px;
+      color:#2563eb !important;
+      font-weight:900;
+    }
+
+    .service-name-cell{
+      color:#0f172a;
+      font-weight:900;
+    }
+
+    .sub-cell{
+      display:block;
+      margin-top:3px;
+      color:#94a3b8;
+      font-size:11px;
+      font-weight:650;
+    }
+
+    .type-badge{
+      display:inline-flex;
+      padding:6px 10px;
+      border-radius:999px;
+      background:#eff6ff;
+      color:#1d4ed8;
+      border:1px solid #dbeafe;
+      font-size:12px;
+      font-weight:800;
+    }
+
+    .region-cell{
+      color:#334155;
+      font-weight:750;
+    }
+
+    .country-mini{
+      display:block;
+      margin-top:4px;
+      color:#94a3b8;
+      font-size:11px;
+      font-weight:600;
+    }
+
+    .coord-cell{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
+      color:#0369a1 !important;
+      white-space:nowrap;
+      font-size:12px !important;
+      font-weight:700;
+    }
+
+    .date-cell{
+      color:#64748b !important;
+      white-space:nowrap;
+      font-size:12px !important;
+      font-weight:700;
+    }
+
+    .empty{
+      text-align:center !important;
+      color:#94a3b8 !important;
+      padding:26px !important;
+    }
+
+    @media(max-width:920px){
+      .topbar{
+        height:auto;
+        padding:16px;
+        flex-direction:column;
+        align-items:flex-start;
+      }
+
+      .actions{
+        width:100%;
+        justify-content:flex-start;
+      }
+
+      .wrap{
+        padding:18px 14px;
+      }
+
+      .hero{
+        grid-template-columns:1fr;
+      }
+
+      .hero h2{
+        font-size:28px;
+      }
+
+      .section-head{
+        align-items:flex-start;
+        flex-direction:column;
+      }
+    }
+  
+/* ── DASHBOARD LOGO + HERO CENTER ALIGN FIX ── */
+.brand-logo{
+  width:52px !important;
+  height:52px !important;
+  border-radius:16px !important;
+  background:linear-gradient(135deg,#2563eb,#0ea5e9) !important;
+  color:#fff !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  box-shadow:0 8px 24px rgba(37,99,235,.25) !important;
+  position:relative !important;
+  font-size:0 !important;
+}
+
+.brand-logo::after{
+  content:none !important;
+}
+
+.brand-badge{
+  position:absolute;
+  top:-4px;
+  right:-4px;
+  width:21px;
+  height:21px;
+  background:#10b981;
+  border-radius:50%;
+  border:3px solid #ffffff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.hero-card{
+  text-align:center !important;
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.hero-card h2{
+  text-align:center !important;
+  margin-left:auto !important;
+  margin-right:auto !important;
+}
+
+.hero-card p{
+  text-align:center !important;
+  margin-left:auto !important;
+  margin-right:auto !important;
+}
+
+.eyebrow{
+  margin-left:auto !important;
+  margin-right:auto !important;
+}
+
+</style>
+</head>
+
+<body>
+<div class="page">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo">
+        <svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.9">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M2 12h20"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+        <span class="brand-badge">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.8" stroke-linecap="round">
+            <path d="M20 6L9 17l-5-5"/>
+          </svg>
+        </span>
+      </div>
+      <div>
+        <h1>GIS Digital Twin & Analyser</h1>
+        <p>Main Dashboard</p>
+      </div>
+    </div>
+
+    <nav class="actions">
+      <a class="btn primary" href="{% url 'map' %}">Open GIS Map</a>
+      <a class="btn" href="{% url 'logout' %}">Logout</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div class="hero-card">
+      
+        <h2>Service Coverage Overview</h2>
+        <p>Road network, demand points, facilities, new service layers and manually added services are available in one clean dashboard.</p>
+      </div>
+
+      
+    </section>
+
+    <section class="stats-grid">
+      <div class="stat-card" style="--soft:#eff6ff;--accent:#2563eb">
+        <div class="stat-head"><div class="stat-icon">🛣️</div></div>
+        <div class="stat-label">Total Roads</div>
+        <div class="stat-value">{{ stats.roads }}</div>
+      </div>
+
+      <div class="stat-card" style="--soft:#ecfdf5;--accent:#059669">
+        <div class="stat-head"><div class="stat-icon">🏠</div></div>
+        <div class="stat-label">Total Villages</div>
+        <div class="stat-value">{{ stats.villages }}</div>
+      </div>
+
+      <div class="stat-card" style="--soft:#f0fdf4;--accent:#16a34a">
+        <div class="stat-head"><div class="stat-icon">✅</div></div>
+        <div class="stat-label">Covered Villages</div>
+        <div class="stat-value">{{ stats.covered_villages }}</div>
+      </div>
+
+      <div class="stat-card" style="--soft:#fef2f2;--accent:#dc2626">
+        <div class="stat-head"><div class="stat-icon">⚠️</div></div>
+        <div class="stat-label">Uncovered Villages</div>
+        <div class="stat-value">{{ stats.uncovered_villages }}</div>
+      </div>
+
+      <div class="stat-card" style="--soft:#fff7ed;--accent:#ea580c">
+        <div class="stat-head"><div class="stat-icon">🏫</div></div>
+        <div class="stat-label">Total Schools</div>
+        <div class="stat-value">{{ stats.schools }}</div>
+      </div>
+
+      <div class="stat-card" style="--soft:#f5f3ff;--accent:#7c3aed">
+        <div class="stat-head"><div class="stat-icon">🎓</div></div>
+        <div class="stat-label">Total Colleges</div>
+        <div class="stat-value">{{ stats.colleges }}</div>
+      </div>
+
+      <div class="stat-card" style="--soft:#eff6ff;--accent:#0284c7">
+        <div class="stat-head"><div class="stat-icon">🏥</div></div>
+        <div class="stat-label">Hospitals</div>
+        <div class="stat-value">{{ stats.hospitals }}</div>
+        <div class="hospital-split">
+          <div><span>Govt</span><strong>{{ stats.govt_hospitals }}</strong></div>
+          <div><span>Private</span><strong>{{ stats.private_hospitals }}</strong></div>
+        </div>
+      </div>
+
+      <div class="stat-card" style="--soft:#fffbeb;--accent:#d97706">
+        <div class="stat-head"><div class="stat-icon">⛽</div></div>
+        <div class="stat-label">Total Petrol Pumps</div>
+        <div class="stat-value">{{ stats.petrol_pumps }}</div>
+      </div>
+
+      <div class="stat-card" style="--soft:#eff6ff;--accent:#1d4ed8">
+        <div class="stat-head"><div class="stat-icon">👮</div></div>
+        <div class="stat-label">Police Stations</div>
+        <div class="stat-value">{{ stats.police_stations }}</div>
+      </div>
+
+      <div class="stat-card" style="--soft:#f8fafc;--accent:#475569">
+        <div class="stat-head"><div class="stat-icon">🚆</div></div>
+        <div class="stat-label">Railway Stations</div>
+        <div class="stat-value">{{ stats.railway_stations }}</div>
+      </div>
+
+      <div class="stat-card" style="--soft:#ecfeff;--accent:#0891b2">
+        <div class="stat-head"><div class="stat-icon">🚌</div></div>
+        <div class="stat-label">Bus Stands</div>
+        <div class="stat-value">{{ stats.bus_stands }}</div>
+      </div>
+
+      <div class="stat-card" style="--soft:#f0fdf4;--accent:#16a34a">
+        <div class="stat-head"><div class="stat-icon">📍</div></div>
+        <div class="stat-label">Manual Services Added</div>
+        <div class="stat-value">{{ stats.manual_services }}</div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>Recent Manual Services</h2>
+          <small>Latest services added from GIS map dashboard.</small>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span class="table-count-pill">{{ stats.manual_services }} Manual Services</span>
+          <a class="btn primary" href="{% url 'map' %}">Add / View on Map</a>
+        </div>
+      </div>
+
+      <div class="manual-table-wrap">
+        <table class="recent-manual-table">
+          <thead>
+            <tr>
+              <th>S.No</th>
+              <th>Service Name</th>
+              <th>Type</th>
+              <th>Region / Country</th>
+              <th>Coordinates</th>
+              <th>Added / Updated</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for s in recent_manual_services %}
+            <tr>
+              <td class="sn-cell">#{{ forloop.counter }}</td>
+              <td>
+                <span class="service-name-cell">{{ s.name }}</span>
+                <span class="sub-cell">Manual Service ID: {{ s.id }}</span>
+              </td>
+              <td><span class="type-badge">{{ s.type|title }}</span></td>
+              <td class="region-cell">
+                {{ s.region|default:"-" }}
+                <span class="country-mini">{{ s.country|default:"India" }}</span>
+              </td>
+              <td class="coord-cell">{{ s.latitude|floatformat:5 }}, {{ s.longitude|floatformat:5 }}</td>
+              <td class="date-cell">
+                {% if s.updated_at %}
+                  {{ s.updated_at|date:"d M Y, h:i A" }}
+                {% elif s.created_at %}
+                  {{ s.created_at|date:"d M Y, h:i A" }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td class="empty" colspan="6">No manual services added yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+  function updateDashboardClock(){
+    const now = new Date();
+    const clock = document.getElementById("dashClock");
+    const date = document.getElementById("dashDate");
+
+    if(clock){
+      clock.textContent = now.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true
+      });
+    }
+
+    if(date){
+      date.textContent = now.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "2-digit",
+        year: "numeric"
+      });
+    }
+  }
+
+  updateDashboardClock();
+  setInterval(updateDashboardClock, 1000);
+</script>
+</body>
+</html>

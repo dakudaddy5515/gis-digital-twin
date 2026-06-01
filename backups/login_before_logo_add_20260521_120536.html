@@ -1,0 +1,643 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login | GIS Digital Twin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+
+    :root{
+      --bg:#06111f;
+      --glass:rgba(8,17,31,.64);
+      --glass-strong:rgba(10,22,39,.82);
+      --border:rgba(255,255,255,.18);
+      --text:#f8fafc;
+      --muted:#9fb4c9;
+      --blue:#1da1ff;
+      --blue-dark:#0878d6;
+      --cyan:#22d3ee;
+      --green:#34d399;
+    }
+
+    body{
+      min-height:100vh;
+      font-family:'DM Sans',Arial,sans-serif;
+      background:#020617;
+      color:var(--text);
+      overflow:hidden;
+    }
+
+    .login-page{
+      min-height:100vh;
+      display:grid;
+      grid-template-columns:65% 35%;
+      background:
+        radial-gradient(circle at 25% 28%, rgba(34,211,238,.28), transparent 28%),
+        radial-gradient(circle at 58% 54%, rgba(52,211,153,.22), transparent 30%),
+        radial-gradient(circle at 80% 35%, rgba(29,161,255,.18), transparent 30%),
+        linear-gradient(135deg,#020617,#071527 52%,#020617);
+      position:relative;
+    }
+
+    .login-page:before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+      background-size:68px 68px;
+      opacity:.65;
+      pointer-events:none;
+    }
+
+    .map-visual{
+      position:relative;
+      overflow:hidden;
+      min-height:100vh;
+      padding:40px;
+    }
+
+    .map-visual:before{
+      /* content:"";
+      position:absolute;
+      inset:-20%;
+      background:
+        linear-gradient(28deg, transparent 18%, rgba(34,211,238,.8) 19%, rgba(34,211,238,.8) 20%, transparent 21%),
+        linear-gradient(146deg, transparent 28%, rgba(52,211,153,.75) 29%, rgba(52,211,153,.75) 30%, transparent 31%),
+        linear-gradient(82deg, transparent 38%, rgba(29,161,255,.85) 39%, rgba(29,161,255,.85) 40%, transparent 41%),
+        linear-gradient(12deg, transparent 48%, rgba(245,158,11,.78) 49%, rgba(245,158,11,.78) 50%, transparent 51%),
+        linear-gradient(116deg, transparent 58%, rgba(34,211,238,.7) 59%, rgba(34,211,238,.7) 60%, transparent 61%);
+      filter:drop-shadow(0 0 12px rgba(34,211,238,.55));
+      transform:perspective(800px) rotateX(58deg) rotateZ(-7deg) translateY(30px);
+      transform-origin:center;
+      opacity:.95; */
+    }
+
+    .map-visual:after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at 26% 34%, rgba(34,211,238,.9) 0 3px, transparent 4px),
+        radial-gradient(circle at 43% 58%, rgba(52,211,153,.9) 0 3px, transparent 4px),
+        radial-gradient(circle at 62% 42%, rgba(245,158,11,.9) 0 3px, transparent 4px),
+        radial-gradient(circle at 74% 67%, rgba(34,211,238,.9) 0 3px, transparent 4px),
+        radial-gradient(circle at 18% 72%, rgba(52,211,153,.9) 0 3px, transparent 4px);
+      filter:drop-shadow(0 0 10px rgba(34,211,238,.7));
+      opacity:.9;
+    }
+
+    .city-title{
+      position:absolute;
+      left:44px;
+      bottom:42px;
+      z-index:2;
+      max-width:560px;
+    }
+
+    .city-title h2{
+      font-size:42px;
+      line-height:1.05;
+      letter-spacing:-1.2px;
+      margin-bottom:12px;
+      text-shadow:0 8px 30px rgba(0,0,0,.55);
+    }
+
+    .city-title p{
+      color:#c7d7e8;
+      font-size:15px;
+      line-height:1.7;
+      max-width:520px;
+    }
+
+    .login-panel{
+      position:relative;
+      z-index:3;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:46px;
+      background:rgba(2,6,23,.42);
+      backdrop-filter:blur(18px);
+      border-left:1px solid rgba(255,255,255,.12);
+      box-shadow:-24px 0 80px rgba(0,0,0,.38);
+    }
+
+    .login-card{
+      width:100%;
+      max-width:390px;
+    }
+
+    .logo{
+      width:58px;
+      height:58px;
+      margin:0 auto 22px;
+      border-radius:18px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:linear-gradient(135deg,var(--blue),var(--cyan));
+      color:#00111f;
+      font-size:28px;
+      box-shadow:0 0 32px rgba(34,211,238,.28);
+    }
+
+    h1{
+      text-align:center;
+      font-size:42px;
+      line-height:1.1;
+      letter-spacing:-1.4px;
+      margin-bottom:34px;
+      text-shadow:0 12px 35px rgba(0,0,0,.55);
+    }
+
+    label{
+      display:block;
+      font-size:14px;
+      color:#e2e8f0;
+      margin:14px 0 7px;
+      font-weight:500;
+    }
+
+    input{
+      width:100%;
+      height:48px;
+      border-radius:8px;
+      border:1px solid rgba(255,255,255,.25);
+      background:rgba(15,23,42,.62);
+      color:white;
+      padding:0 14px;
+      outline:none;
+      font-size:16px;
+      font-family:inherit;
+      transition:.18s;
+    }
+
+    input::placeholder{
+      color:rgba(226,232,240,.48);
+    }
+
+    input:focus{
+      border-color:rgba(34,211,238,.72);
+      box-shadow:0 0 0 4px rgba(34,211,238,.11);
+      background:rgba(15,23,42,.78);
+    }
+
+    .password-wrap{
+      position:relative;
+    }
+
+    .password-wrap input{
+      padding-right:48px;
+    }
+
+    .eye-btn{
+      position:absolute;
+      right:8px;
+      top:50%;
+      transform:translateY(-50%);
+      width:36px;
+      height:36px;
+      border:0;
+      border-radius:8px;
+      background:transparent;
+      color:#dbeafe;
+      cursor:pointer;
+      font-size:16px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .eye-btn:hover{
+      background:rgba(255,255,255,.08);
+    }
+
+    .login-btn{
+      width:100%;
+      height:48px;
+      margin-top:30px;
+      border:0;
+      border-radius:8px;
+      background:linear-gradient(135deg,var(--blue),var(--blue-dark));
+      color:white;
+      font-size:16px;
+      font-weight:800;
+      cursor:pointer;
+      font-family:inherit;
+      box-shadow:0 12px 30px rgba(29,161,255,.24);
+      transition:.18s;
+    }
+
+    .login-btn:hover{
+      transform:translateY(-1px);
+      box-shadow:0 16px 38px rgba(29,161,255,.34);
+    }
+
+    .forgot{
+      margin-top:20px;
+      text-align:center;
+      color:#8fd3ff;
+      font-size:15px;
+    }
+
+    .error{
+      margin-top:18px;
+      padding:11px 13px;
+      border-radius:10px;
+      background:rgba(248,113,113,.14);
+      border:1px solid rgba(248,113,113,.28);
+      color:#fecaca;
+      font-size:13px;
+      text-align:center;
+    }
+
+    @media(max-width:900px){
+      .login-page{
+        grid-template-columns:1fr;
+      }
+
+      .map-visual{
+        display:none;
+      }
+
+      .login-panel{
+        border-left:0;
+        background:
+          radial-gradient(circle at top left,rgba(34,211,238,.15),transparent 35%),
+          radial-gradient(circle at bottom right,rgba(52,211,153,.12),transparent 35%),
+          rgba(2,6,23,.92);
+      }
+
+      h1{
+        font-size:34px;
+      }
+    }
+  
+/* ── PASSWORD EYE BUTTON VISIBILITY FIX ── */
+.password-wrap{
+  position: relative !important;
+}
+
+.password-wrap input{
+  padding-right: 54px !important;
+}
+
+.eye-btn{
+  position: absolute !important;
+  right: 8px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 38px !important;
+  height: 34px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 1px solid rgba(255,255,255,.22) !important;
+  border-radius: 8px !important;
+  background: rgba(2,6,23,.45) !important;
+  color: #ffffff !important;
+  cursor: pointer !important;
+  font-size: 17px !important;
+  line-height: 1 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 5 !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,.25) !important;
+}
+
+.eye-btn:hover{
+  background: rgba(21,157,247,.35) !important;
+  border-color: rgba(34,211,238,.65) !important;
+}
+
+</style>
+</head>
+<body>
+  <main class="login-page">
+    <section class="map-visual">
+      <div class="city-title">
+        <h2>Smart Geospatial Infrastructure</h2>
+        <p>Analyse services, roads, villages, hospitals, schools, colleges and live project layers through a protected GIS dashboard.</p>
+      </div>
+    </section>
+
+    <section class="login-panel">
+      <form class="login-card" method="post">
+        {% csrf_token %}
+
+        <div class="logo">🗺️</div>
+        <h1>GIS Digital Twin</h1>
+
+        <label for="username">Username</label>
+        <input id="username" name="username" placeholder="Username" required autofocus>
+
+        <label for="password">Password</label>
+        <div class="password-wrap">
+          <input id="password" name="password" type="password" placeholder="Password" required>
+          <button type="button" class="eye-btn" id="togglePassword" aria-label="Show password" title="Show password">👁️</button>
+        </div>
+
+        <button class="login-btn" type="submit">Log in</button>
+
+        <div class="forgot">Protected project access</div>
+
+        {% if error %}
+          <div class="error">{{ error }}</div>
+        {% endif %}
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const passwordInput = document.getElementById("password");
+    const togglePassword = document.getElementById("togglePassword");
+
+    if (passwordInput && togglePassword) {
+      togglePassword.addEventListener("click", function () {
+        const isHidden = passwordInput.type === "password";
+        passwordInput.type = isHidden ? "text" : "password";
+        togglePassword.textContent = isHidden ? "🙈" : "👁";
+        togglePassword.title = isHidden ? "Hide password" : "Show password";
+        togglePassword.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
+      });
+    }
+  </script>
+</body>
+</html> -->
+
+
+
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login | GIS Digital Twin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+
+    :root{
+      --text:#f8fafc;
+      --muted:#cbd5e1;
+      --blue:#159df7;
+      --blue-dark:#0878d6;
+      --border:rgba(255,255,255,.22);
+      --input-bg:rgba(15,23,42,.50);
+    }
+
+    html,body{
+      min-height:100%;
+    }
+
+    body{
+      min-height:100vh;
+      font-family:'DM Sans',Arial,sans-serif;
+      color:var(--text);
+      overflow:hidden;
+      background:#020617;
+    }
+
+    .login-page{
+      min-height:100vh;
+      width:100%;
+      position:relative;
+      display:flex;
+      justify-content:flex-end;
+      background:
+        linear-gradient(90deg, rgba(2,6,23,.08) 0%, rgba(2,6,23,.10) 55%, rgba(2,6,23,.50) 100%),
+        url("{% static 'services/images/login-bg.jpeg' %}");
+      background-size:cover;
+      background-position:center;
+      background-repeat:no-repeat;
+    }
+
+    .login-page::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.045) 1px, transparent 1px);
+      background-size:68px 68px;
+      opacity:.42;
+      pointer-events:none;
+    }
+
+    .login-page::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at 35% 55%, rgba(34,211,238,.10), transparent 28%),
+        radial-gradient(circle at 78% 50%, rgba(15,23,42,.55), transparent 32%);
+      pointer-events:none;
+    }
+
+    .login-panel{
+      position:relative;
+      z-index:2;
+      width:35%;
+      min-width:430px;
+      min-height:100vh;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:54px 64px;
+      background:rgba(5,12,24,.14);
+      border-left:1px solid rgba(255,255,255,.12);
+      backdrop-filter:blur(6px);
+      -webkit-backdrop-filter:blur(6px);
+      box-shadow:-30px 0 90px rgba(0,0,0,.36);
+    }
+
+    .login-card{
+      width:100%;
+      max-width:390px;
+    }
+
+    h1{
+      text-align:center;
+      font-size:42px;
+      line-height:1.1;
+      letter-spacing:-1.3px;
+      margin-bottom:44px;
+      font-weight:800;
+      color:#fff;
+      text-shadow:0 12px 35px rgba(0,0,0,.65);
+    }
+
+    label{
+      display:block;
+      font-size:14px;
+      color:#f1f5f9;
+      margin:14px 0 7px;
+      font-weight:500;
+    }
+
+    input{
+      width:100%;
+      height:48px;
+      border-radius:8px;
+      border:1px solid var(--border);
+      background:var(--input-bg);
+      color:white;
+      padding:0 14px;
+      outline:none;
+      font-size:17px;
+      font-family:inherit;
+      transition:.18s;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+    }
+
+    input::placeholder{
+      color:rgba(226,232,240,.52);
+    }
+
+    input:focus{
+      border-color:rgba(34,211,238,.75);
+      box-shadow:0 0 0 4px rgba(34,211,238,.12);
+      background:rgba(15,23,42,.34);
+    }
+
+    .password-wrap{
+      position:relative;
+    }
+
+    .password-wrap input{
+      padding-right:48px;
+    }
+
+    .eye-btn{
+      position:absolute;
+      right:8px;
+      top:50%;
+      transform:translateY(-50%);
+      width:36px;
+      height:36px;
+      border:0;
+      border-radius:8px;
+      background:transparent;
+      color:#dbeafe;
+      cursor:pointer;
+      font-size:16px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+
+    .eye-btn:hover{
+      background:rgba(255,255,255,.08);
+    }
+
+    .login-btn{
+      width:100%;
+      height:48px;
+      margin-top:30px;
+      border:0;
+      border-radius:8px;
+      background:linear-gradient(135deg,var(--blue),var(--blue-dark));
+      color:white;
+      font-size:17px;
+      font-weight:800;
+      cursor:pointer;
+      font-family:inherit;
+      box-shadow:0 14px 32px rgba(21,157,247,.28);
+      transition:.18s;
+    }
+
+    .login-btn:hover{
+      transform:translateY(-1px);
+      box-shadow:0 18px 42px rgba(21,157,247,.38);
+    }
+
+    .login-note{
+      margin-top:20px;
+      text-align:center;
+      color:#93c5fd;
+      font-size:15px;
+    }
+
+    .error{
+      margin-top:18px;
+      padding:11px 13px;
+      border-radius:10px;
+      background:rgba(248,113,113,.15);
+      border:1px solid rgba(248,113,113,.30);
+      color:#fecaca;
+      font-size:13px;
+      text-align:center;
+    }
+
+    @media(max-width:900px){
+      .login-page{
+        justify-content:center;
+      }
+
+      .login-panel{
+        width:100%;
+        min-width:0;
+        padding:34px 22px;
+        background:rgba(5,12,24,.42);
+        border-left:0;
+      }
+
+      h1{
+        font-size:34px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="login-page">
+    <section class="login-panel">
+      <form class="login-card" method="post">
+        {% csrf_token %}
+
+        <h1>GIS Digital Twin</h1>
+
+        <label for="username">Username</label>
+        <input id="username" name="username" placeholder="Username" required autofocus>
+
+        <label for="password">Password</label>
+        <div class="password-wrap">
+          <input id="password" name="password" type="password" placeholder="Password" required>
+          <button type="button" class="eye-btn" id="togglePassword" aria-label="Show password" title="Show password">👁️</button>
+        </div>
+
+        <button class="login-btn" type="submit">Log in</button>
+
+
+
+        {% if error %}
+          <div class="error">{{ error }}</div>
+        {% endif %}
+      </form>
+    </section>
+  </main>
+
+  <script>
+    const passwordInput = document.getElementById("password");
+    const togglePassword = document.getElementById("togglePassword");
+
+    if (passwordInput && togglePassword) {
+      togglePassword.addEventListener("click", function () {
+        const isHidden = passwordInput.type === "password";
+        passwordInput.type = isHidden ? "text" : "password";
+        togglePassword.textContent = isHidden ? "🙈" : "👁";
+        togglePassword.title = isHidden ? "Hide password" : "Show password";
+        togglePassword.setAttribute("aria-label", isHidden ? "Hide password" : "Show password");
+      });
+    }
+  </script>
+</body>
+</html>

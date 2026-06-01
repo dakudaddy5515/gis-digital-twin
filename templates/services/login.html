@@ -1,0 +1,633 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GIS Digital Twin — Login</title>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #ffffff;
+    }
+
+    .screen {
+      display: flex;
+      height: 100vh;
+      width: 100%;
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    /* LEFT PANEL */
+    .left {
+      display: flex;
+      flex-direction: column;
+      width: 55%;
+      position: relative;
+      background: #fafcff;
+      overflow: hidden;
+    }
+
+    .grid-bg {
+      position: absolute;
+      inset: 0;
+      opacity: 0.04;
+      background-image:
+        linear-gradient(#0f172a 1px, transparent 1px),
+        linear-gradient(90deg, #0f172a 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+
+    .float-card {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 10px 14px;
+      box-shadow: 0 10px 40px rgba(15,23,42,0.08);
+      border: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: absolute;
+      z-index: 20;
+      min-width: 160px;
+    }
+
+    .icon-box {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 20px;
+    }
+
+    .card-label {
+      font-size: 11px;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    .card-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-top: 3px;
+    }
+
+    .time-card {
+      position: absolute;
+      top: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 10px 22px;
+      box-shadow: 0 8px 24px rgba(15,23,42,0.06);
+      border: 1px solid rgba(241,245,249,0.8);
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .time-text {
+      font-size: 22px;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+    }
+
+    .date-text {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    .node-graph {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .node {
+      position: absolute;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .center-pulse {
+      width: 64px;
+      height: 64px;
+      background: rgba(59,130,246,0.12);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%,100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.08); opacity: 0.7; }
+    }
+
+    .branding {
+      position: absolute;
+      bottom: 28px;
+      left: 28px;
+      z-index: 20;
+      max-width: 320px;
+    }
+
+    .brand-logo {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: #2563eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* RIGHT PANEL */
+    .right {
+      width: 45%;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px;
+    }
+
+    .form-wrap {
+      width: 100%;
+      max-width: 380px;
+    }
+
+    .logo-wrap {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 32px;
+    }
+
+    .logo-icon {
+      width: 72px;
+      height: 72px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #2563eb, #0ea5e9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 24px rgba(37,99,235,0.25);
+      position: relative;
+    }
+
+    .badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 22px;
+      height: 22px;
+      background: #10b981;
+      border-radius: 50%;
+      border: 3px solid #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    h1 {
+      font-size: 32px;
+      font-weight: 700;
+      color: #0f172a;
+      text-align: center;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #64748b;
+      text-align: center;
+      margin-top: 8px;
+      margin-bottom: 32px;
+    }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .input-wrap {
+      position: relative;
+      margin-bottom: 18px;
+    }
+
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #94a3b8;
+      pointer-events: none;
+      display: flex;
+    }
+
+    input[type="text"],
+    input[type="password"] {
+      width: 100%;
+      height: 48px;
+      padding: 0 44px 0 42px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      font-size: 14px;
+      color: #0f172a;
+      outline: none;
+      transition: all 0.15s;
+      font-family: inherit;
+      font-weight: 600;
+    }
+
+    input::placeholder {
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    input:focus {
+      border-color: #3b82f6;
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
+    }
+
+    .toggle-btn {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #94a3b8;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+    }
+
+    .toggle-btn:hover {
+      color: #475569;
+    }
+
+    .submit-btn {
+      width: 100%;
+      height: 48px;
+      background: linear-gradient(90deg, #2563eb, #0ea5e9);
+      border: none;
+      border-radius: 12px;
+      color: #ffffff;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 14px rgba(37,99,235,0.25);
+      margin-top: 8px;
+      font-family: inherit;
+    }
+
+    .submit-btn:hover {
+      background: linear-gradient(90deg, #1d4ed8, #0284c7);
+      box-shadow: 0 6px 20px rgba(37,99,235,0.35);
+      transform: translateY(-1px);
+    }
+
+    .submit-btn:active {
+      transform: scale(0.98);
+    }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 32px 0 12px;
+    }
+
+    .divider-line {
+      flex: 1;
+      height: 1px;
+      background: #e2e8f0;
+    }
+
+    .divider-text {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+    }
+
+    .secure-text {
+      text-align: center;
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 0;
+    }
+
+    .error {
+      margin-top: 16px;
+      padding: 11px 13px;
+      border-radius: 12px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      color: #991b1b;
+      font-size: 13px;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    @media (max-width: 900px) {
+      .left { display: none; }
+      .right { width: 100%; padding: 32px 24px; }
+      .screen { display: block; }
+    }
+  </style>
+</head>
+
+<body>
+<div class="screen">
+
+  <!-- LEFT PANEL -->
+  <div class="left">
+    <div class="grid-bg"></div>
+
+    <div class="time-card">
+      <div class="time-text" id="clock">12:00:00 AM</div>
+      <div class="date-text" id="dateText">Friday, May 22, 2026</div>
+    </div>
+
+    <div class="float-card" style="top:12%;left:4%">
+      <div class="icon-box" style="background:#eff6ff">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <rect x="3" y="3" width="18" height="18" rx="2" fill="#DBEAFE" stroke="#3B82F6" stroke-width="1.5"/>
+          <path d="M12 7v10M7 12h10" stroke="#1D4ED8" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <div class="card-label">Healthcare</div>
+        <div class="card-value"><span id="loginHealthcareCount">--</span> Facilities</div>
+      </div>
+    </div>
+
+    <div class="float-card" style="top:18%;right:8%">
+      <div class="icon-box" style="background:#fff7ed">🏫</div>
+      <div>
+        <div class="card-label">Education</div>
+        <div class="card-value"><span id="loginEducationCount">--</span> Institutions</div>
+      </div>
+    </div>
+
+    <div class="node-graph">
+      <div style="position:relative;width:480px;height:480px;">
+        <svg style="position:absolute;inset:0;width:100%;height:100%" viewBox="0 0 480 480">
+          <defs>
+            <radialGradient id="cg" cx="50%" cy="50%">
+              <stop offset="0%" stop-color="#3B82F6" stop-opacity="0.12"/>
+              <stop offset="100%" stop-color="#06B6D4" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+
+          <circle cx="240" cy="240" r="110" fill="url(#cg)"/>
+          <circle cx="240" cy="240" r="185" fill="none" stroke="#93C5FD" stroke-width="1.5" stroke-dasharray="4 8" opacity="0.5"/>
+          <circle cx="240" cy="240" r="140" fill="none" stroke="#86EFAC" stroke-width="1.5" stroke-dasharray="3 6" opacity="0.4"/>
+          <circle cx="240" cy="240" r="95" fill="none" stroke="#C4B5FD" stroke-width="1.5" stroke-dasharray="2 5" opacity="0.3"/>
+
+          <path d="M 70 240 Q 145 185 205 205 T 265 240" fill="none" stroke="#60A5FA" stroke-width="2.5" stroke-linecap="round" opacity="0.8"/>
+          <path d="M 130 390 Q 195 320 240 290" fill="none" stroke="#C4B5FD" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+          <path d="M 240 290 Q 310 300 350 240" fill="none" stroke="#FCD34D" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+          <path d="M 350 240 Q 370 185 390 210" fill="none" stroke="#FDBA74" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+          <path d="M 135 262 Q 185 215 260 222 Q 300 228 340 185" fill="none" stroke="#38BDF8" stroke-width="2.5" stroke-linecap="round" opacity="0.85"/>
+        </svg>
+
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)">
+          <div class="center-pulse">
+            <div style="width:40px;height:40px;border-radius:50%;background:#3b82f6;display:flex;align-items:center;justify-content:center">
+              <div style="width:18px;height:18px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center">
+                <div style="width:9px;height:9px;border-radius:50%;background:#2563eb"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="node" style="left:10%;top:45%;width:28px;height:28px;background:#e0f2fe;box-shadow:0 0 14px rgba(14,165,233,0.3)"><div style="width:12px;height:12px;border-radius:50%;background:#0ea5e9"></div></div>
+        <div class="node" style="left:26%;top:35%;width:24px;height:24px;background:#dbeafe"><div style="width:10px;height:10px;border-radius:50%;background:#3b82f6"></div></div>
+        <div class="node" style="left:37%;top:29%;width:24px;height:24px;background:#e0e7ff"><div style="width:8px;height:8px;border-radius:50%;background:#6366f1"></div></div>
+        <div class="node" style="left:60%;top:21%;width:28px;height:28px;background:#ffedd5;box-shadow:0 0 12px rgba(249,115,22,0.25)"><div style="width:10px;height:10px;border-radius:50%;background:#f97316"></div></div>
+        <div class="node" style="left:73%;top:15%;width:24px;height:24px;background:#f3e8ff"><div style="width:8px;height:8px;border-radius:50%;background:#a855f7"></div></div>
+        <div class="node" style="left:67%;top:27%;width:28px;height:28px;background:#d1fae5;box-shadow:0 0 12px rgba(16,185,129,0.25)"><div style="width:10px;height:10px;border-radius:50%;background:#10b981"></div></div>
+        <div class="node" style="left:72%;top:37%;width:24px;height:24px;background:#ccfbf1"><div style="width:8px;height:8px;border-radius:50%;background:#0d9488"></div></div>
+        <div class="node" style="left:65%;top:51%;width:28px;height:28px;background:#fef3c7;box-shadow:0 0 12px rgba(245,158,11,0.25)"><div style="width:10px;height:10px;border-radius:50%;background:#f59e0b"></div></div>
+        <div class="node" style="left:45%;top:59%;width:28px;height:28px;background:#ede9fe;box-shadow:0 0 12px rgba(139,92,246,0.25)"><div style="width:10px;height:10px;border-radius:50%;background:#7c3aed"></div></div>
+        <div class="node" style="left:19%;top:71%;width:32px;height:32px;background:#fce7f3;box-shadow:0 0 14px rgba(236,72,153,0.3)"><div style="width:12px;height:12px;border-radius:50%;background:#ec4899"></div></div>
+        <div class="node" style="left:53%;top:41%;width:22px;height:22px;background:#cffafe"><div style="width:8px;height:8px;border-radius:50%;background:#06b6d4"></div></div>
+      </div>
+    </div>
+
+    <div class="float-card" style="bottom:14%;left:6%">
+      <div class="icon-box" style="background:#f0fdf4">🛣️</div>
+      <div>
+        <div class="card-label">Road Network</div>
+        <div class="card-value"><span id="loginRoadKm">--</span> km</div>
+      </div>
+    </div>
+
+    <div class="float-card" style="bottom:10%;right:8%">
+      <div class="icon-box" style="background:#faf5ff">🏠</div>
+      <div>
+        <div class="card-label">Villages</div>
+        <div class="card-value"><span id="loginVillagesCount">--</span> Mapped</div>
+      </div>
+    </div>
+
+    <div class="branding">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+        <div class="brand-logo">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+        </div>
+        <span style="font-size:14px;font-weight:700;color:#1e293b;letter-spacing:0.05em">GIS DIGITAL TWIN</span>
+      </div>
+      <p style="font-size:12px;line-height:1.6;color:#64748b">
+        Smart Geospatial Infrastructure — Analyse services, roads, villages, hospitals, schools & live project layers through the GIS dashboard.
+      </p>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL - Login Form -->
+  <div class="right">
+    <form class="form-wrap" method="post">
+      {% csrf_token %}
+
+      <div class="logo-wrap">
+        <div class="logo-icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.75">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+          <div class="badge">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round">
+              <path d="M20 6L9 17l-5-5"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <h1>Welcome Back</h1>
+      <p class="subtitle">Sign in to access your GIS Digital Twin dashboard</p>
+
+      <div>
+        <label for="username">Username</label>
+        <div class="input-wrap">
+          <span class="input-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+          </span>
+          <input type="text" id="username" name="username" placeholder="Enter your username" autocomplete="username" required autofocus>
+        </div>
+      </div>
+
+      <div>
+        <label for="password">Password</label>
+        <div class="input-wrap">
+          <span class="input-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+              <rect x="3" y="11" width="18" height="11" rx="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </span>
+          <input type="password" id="password" name="password" placeholder="Enter your password" autocomplete="current-password" required>
+          <button class="toggle-btn" id="togglePwd" type="button" aria-label="Toggle password visibility">
+            <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {% if error %}
+        <div class="error">{{ error }}</div>
+      {% endif %}
+
+      <button class="submit-btn" type="submit">Sign In</button>
+
+      <div class="divider">
+        <div class="divider-line"></div>
+       
+        <div class="divider-line"></div>
+      </div>
+
+     
+    </form>
+  </div>
+</div>
+
+<script>
+  function updateClock() {
+    const now = new Date();
+
+    const clockEl = document.getElementById("clock");
+    const dateEl = document.getElementById("dateText");
+
+    if (clockEl) {
+      clockEl.textContent = now.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true
+      });
+    }
+
+    if (dateEl) {
+      dateEl.textContent = now.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "2-digit",
+        year: "numeric"
+      });
+    }
+  }
+
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  const pwdInput = document.getElementById("password");
+  const toggleBtn = document.getElementById("togglePwd");
+  const eyeIcon = document.getElementById("eyeIcon");
+
+  const eyeOnHTML = `<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>`;
+  const eyeOffHTML = `<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>`;
+
+  if (pwdInput && toggleBtn && eyeIcon) {
+    toggleBtn.addEventListener("click", () => {
+      const isPassword = pwdInput.type === "password";
+      pwdInput.type = isPassword ? "text" : "password";
+      eyeIcon.innerHTML = isPassword ? eyeOffHTML : eyeOnHTML;
+    });
+  }
+</script>
+
+<script>
+/* ── LOGIN PAGE LIVE DB STATS ── */
+(function(){
+  function formatNumber(value){
+    return Number(value || 0).toLocaleString("en-IN");
+  }
+
+  function setText(id, value){
+    const el = document.getElementById(id);
+    if(el){
+      el.textContent = formatNumber(value);
+    }
+  }
+
+  fetch("/api/login-live-stats/")
+    .then(function(res){
+      if(!res.ok){
+        throw new Error("HTTP " + res.status);
+      }
+      return res.json();
+    })
+    .then(function(data){
+      if(!data || !data.success) return;
+
+      setText("loginHealthcareCount", data.healthcare);
+      setText("loginEducationCount", data.education);
+      setText("loginRoadKm", data.road_network_km);
+      setText("loginVillagesCount", data.villages);
+    })
+    .catch(function(err){
+      console.warn("Login live stats failed:", err);
+    });
+})();
+</script>
+
+</body>
+</html>

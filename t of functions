@@ -1,0 +1,6 @@
+                                                                                                                          List of functions
+ Schema  |       Name        | Result data type |                                       Argument data types                                        | Type | Volatility | Parallel |  Owner   | Security | Access privileges | Language | Internal name | Description 
+---------+-------------------+------------------+--------------------------------------------------------------------------------------------------+------+------------+----------+----------+----------+-------------------+----------+---------------+-------------
+ routing | get_route_geojson | jsonb            | origin_service_id integer, destination_service_id integer, cost_by text DEFAULT 'distance'::text | func | volatile   | unsafe   | postgres | invoker  |                   | plpgsql  |               | 
+(1 row)
+

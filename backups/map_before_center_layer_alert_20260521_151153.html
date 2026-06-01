@@ -1,0 +1,3579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GIS Digital Twin & Analyser</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+:root {
+  --bg-deep: #070b12;
+  --sidebar-bg: rgba(10,16,25,0.97);
+  --panel-bg: rgba(13,18,33,0.98);
+  --surface: #1e293b;
+  --surface-light: #2d3a4e;
+  --border-subtle: rgba(255,255,255,0.06);
+  --border-med: rgba(255,255,255,0.12);
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-dim: #5b6e8c;
+  --accent: #f59e0b;
+  --accent-dim: rgba(245,158,11,0.12);
+  --accent-2: #3b82f6;
+  --success: #10b981;
+  --danger: #ef4444;
+  --danger-dim: rgba(239,68,68,0.12);
+  --shadow-xl: 0 25px 50px rgba(0,0,0,0.6);
+  --radius-lg: 20px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+}
+
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--bg-deep);
+  color: var(--text);
+  font-size: 13px;
+}
+
+/* ── MAP ── */
+#map {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1;
+}
+.route-clicking #map { cursor: crosshair !important; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  position: fixed;
+  left: 14px; top: 14px; bottom: 14px;
+  width: 252px;
+  background: var(--sidebar-bg);
+  backdrop-filter: blur(24px);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-med);
+  display: flex;
+  flex-direction: column;
+  z-index: 2000;
+  box-shadow: var(--shadow-xl);
+  overflow: hidden;
+}
+
+.sidebar-header {
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.logo-icon {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--accent), #d97706);
+  border-radius: 13px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 6px 14px -4px rgba(0,0,0,0.5);
+  flex-shrink: 0;
+}
+
+.logo-text h2 {
+  font-size: 14px; font-weight: 800; letter-spacing: -0.4px;
+  background: linear-gradient(120deg, #fff 40%, var(--accent));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.logo-text p { font-size: 10px; color: var(--text-dim); margin-top: 2px; letter-spacing: 0.3px; }
+
+.nav-tabs {
+  padding: 10px 10px;
+  display: flex; flex-direction: column; gap: 2px;
+  flex: 1; overflow-y: auto;
+  scrollbar-width: none;
+}
+.nav-tabs::-webkit-scrollbar { display: none; }
+
+.nav-tab {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px; font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all .18s;
+  border: none; background: transparent; width: 100%; text-align: left;
+  position: relative;
+}
+.nav-tab svg { width: 16px; height: 16px; stroke-width: 1.8; flex-shrink: 0; }
+.nav-tab:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+.nav-tab.active {
+  background: var(--accent-dim); color: var(--accent);
+  border-left: 2px solid var(--accent);
+  padding-left: 10px;
+}
+
+.sidebar-footer {
+  padding: 14px;
+  border-top: 1px solid var(--border-subtle);
+  display: flex; flex-direction: column; gap: 10px;
+  flex-shrink: 0;
+}
+
+#statusBadge {
+  background: rgba(16,185,129,0.1);
+  padding: 8px 12px;
+  border-radius: 40px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px; font-weight: 600;
+  text-align: center;
+  border: 1px solid rgba(16,185,129,0.22);
+  color: var(--success);
+  transition: all .3s;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.footer-btns { display: flex; gap: 7px; }
+.footer-btn {
+  flex: 1; padding: 8px 6px;
+  border-radius: 40px;
+  border: 1px solid var(--border-med);
+  background: var(--surface);
+  color: var(--text); font-size: 11.5px; font-weight: 700;
+  cursor: pointer; transition: all .15s;
+  font-family: 'DM Sans', sans-serif;
+}
+.footer-btn:hover { background: var(--surface-light); transform: translateY(-1px); }
+.footer-btn.primary { background: var(--accent); color: #000; border-color: var(--accent); }
+.footer-btn.primary:hover { background: #d97706; }
+
+/* ── DROPDOWN PANELS ── */
+.dropdown-panel {
+  display: none;
+  position: fixed;
+  left: 278px;
+  z-index: 3000;
+  background: var(--panel-bg);
+  backdrop-filter: blur(20px);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-med);
+  box-shadow: var(--shadow-xl);
+  width: 360px;
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-med) transparent;
+}
+.dropdown-panel.wide { width: 400px; }
+.dropdown-panel.open { display: block; animation: dpIn .18s ease; }
+@keyframes dpIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+.dropdown-panel::-webkit-scrollbar { width: 4px; }
+.dropdown-panel::-webkit-scrollbar-thumb { background: var(--border-med); border-radius: 3px; }
+
+.dp-section { padding: 16px 18px; border-bottom: 1px solid var(--border-subtle); }
+.dp-section:last-child { border-bottom: none; }
+.dp-title {
+  font-size: 10.5px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 1px;
+  color: var(--accent); margin-bottom: 12px;
+}
+
+/* ── FORMS ── */
+.dp-label { display: block; font-size: 10.5px; font-weight: 700; color: var(--text-dim); margin: 10px 0 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+.form-input, select {
+  width: 100%; padding: 9px 12px;
+  background: var(--surface); border: 1px solid var(--border-med);
+  border-radius: var(--radius-sm); color: var(--text);
+  font-size: 12.5px; font-family: 'DM Sans', sans-serif;
+  outline: none; transition: border-color .2s, box-shadow .2s;
+}
+.form-input::placeholder { color: var(--text-dim); }
+.form-input:focus, select:focus { border-color: var(--accent-2); box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+select { cursor: pointer; }
+select option { background: #111827; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+/* ── BUTTONS ── */
+.btn-row { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 11px; }
+.btn {
+  padding: 8px 14px; border: 1px solid var(--border-med);
+  border-radius: 40px; background: var(--surface);
+  color: var(--text); font-size: 12px; font-weight: 700;
+  cursor: pointer; font-family: 'DM Sans', sans-serif;
+  transition: all .15s; white-space: nowrap;
+}
+.btn:hover { background: var(--surface-light); transform: translateY(-1px); }
+.btn.primary { background: var(--accent-2); color: white; border-color: var(--accent-2); }
+.btn.primary:hover { background: #2563eb; }
+.btn.accent { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 800; }
+.btn.accent:hover { background: #d97706; }
+.btn.danger { background: var(--danger-dim); color: var(--danger); border-color: rgba(239,68,68,0.3); }
+.btn.danger:hover { background: var(--danger); color: white; }
+.btn.active-route-mode { background: var(--success) !important; color: #000 !important; border-color: var(--success) !important; }
+.btn.full { width: 100%; text-align: center; justify-content: center; }
+
+/* ── CHECKBOXES ── */
+.check-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.check-grid.single { grid-template-columns: 1fr; }
+.check-item {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--surface); border: 1px solid var(--border-subtle);
+  border-radius: 40px; padding: 8px 12px;
+  font-size: 12px; color: var(--text-muted);
+  cursor: pointer; transition: all .15s;
+}
+.check-item:hover { border-color: var(--border-med); color: var(--text); }
+.check-item input[type="checkbox"] { accent-color: var(--accent); width: 13px; height: 13px; cursor: pointer; flex-shrink: 0; }
+
+/* ── ROUTE SUMMARY ── */
+.route-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-top: 10px; }
+.rscard { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 10px 12px; }
+.rscard .rl { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+.rscard .rv { font-size: 15px; font-weight: 700; color: var(--text); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+
+/* ── SERVICE TABLE ── */
+.service-table-wrap { overflow-x: auto; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); }
+.service-table { width: 100%; border-collapse: collapse; font-size: 12px; min-width: 300px; }
+.service-table th, .service-table td { border-bottom: 1px solid var(--border-subtle); padding: 8px 9px; text-align: left; vertical-align: top; }
+.service-table th { background: var(--surface); font-weight: 700; color: var(--text-dim); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.4px; }
+.service-table td { color: var(--text-muted); word-break: break-word; }
+.service-table tr:last-child td { border-bottom: none; }
+.service-table tr:hover td { background: rgba(255,255,255,0.02); }
+.action-btn { border: 1px solid var(--border-subtle); padding: 4px 8px; margin: 1px; border-radius: 20px; font-size: 11px; font-weight: 700; cursor: pointer; transition: all .15s; font-family: 'DM Sans', sans-serif; }
+.edit-btn { background: rgba(245,158,11,0.12); color: var(--accent); border-color: rgba(245,158,11,0.3); }
+.edit-btn:hover { background: var(--accent); color: #000; }
+.delete-btn { background: var(--danger-dim); color: var(--danger); border-color: rgba(239,68,68,0.3); }
+.delete-btn:hover { background: var(--danger); color: white; }
+
+/* ── HELPERS & MESSAGES ── */
+.helper { font-size: 11.5px; color: var(--text-dim); line-height: 1.5; margin-top: 8px; }
+.msg { font-size: 11.5px; font-weight: 700; min-height: 16px; margin-top: 8px; color: var(--success); font-family: 'JetBrains Mono', monospace; }
+
+/* ── MULTI-STOP ── */
+#multiStopList { font-size: 12px; color: var(--text-muted); line-height: 1.7; margin-top: 6px; font-family: 'JetBrains Mono', monospace; }
+
+/* ── LEGEND ── */
+.legend-grid { display: flex; flex-direction: column; gap: 8px; }
+.legend-item { display: flex; align-items: center; gap: 9px; font-size: 12px; color: var(--text-muted); }
+.legend-dot { width: 13px; height: 13px; border-radius: 3px; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1); }
+.legend-icon { width: 24px; height: 24px; display:flex; align-items:center; justify-content:center; background:#fff; border-radius:50%; font-size:14px; border:2px solid rgba(15,23,42,.25); box-shadow:0 2px 8px rgba(0,0,0,.25); flex-shrink:0; }
+.legend-line { width: 22px; height: 3px; border-radius: 2px; flex-shrink: 0; }
+
+/* Active mode button color */
+.active-route-mode,
+.mode-on {
+  background: #16a34a !important;
+  color: #ffffff !important;
+  border-color: #15803d !important;
+  box-shadow: 0 0 0 2px rgba(22,163,74,0.25), 0 8px 18px rgba(22,163,74,0.25) !important;
+}
+
+
+/* Service Management active button state */
+#pickServiceMapBtn.service-mode-on,
+#useMapCenterBtn.service-mode-on,
+#lockServiceBtn.service-mode-on {
+  background: #16a34a !important;
+  color: #ffffff !important;
+  border: 1px solid #15803d !important;
+  box-shadow: 0 0 0 2px rgba(22,163,74,0.28), 0 8px 18px rgba(22,163,74,0.28) !important;
+  font-weight: 800 !important;
+}
+
+
+/* Service Edit Popup */
+.service-edit-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;
+  pointer-events: none;
+}
+.service-edit-card {
+  pointer-events: auto;
+  position: absolute;
+  top: 88px;
+  right: 28px;
+  width: 380px;
+  max-width: calc(100vw - 40px);
+  background: var(--panel-bg, #0f172a);
+  color: var(--text, #e5e7eb);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 18px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.45);
+  padding: 16px;
+}
+.service-edit-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.service-edit-title {
+  font-weight: 900;
+  font-size: 16px;
+}
+.service-edit-close {
+  border: 0;
+  background: rgba(255,255,255,.08);
+  color: inherit;
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.service-edit-msg {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-dim, #94a3b8);
+}
+.service-edit-msg.error {
+  color: #f87171;
+}
+.service-edit-msg.ok {
+  color: #22c55e;
+}
+
+
+.route-width-summary{
+  margin-top:12px;
+  background:rgba(15,23,42,.72);
+  border:1px solid rgba(148,163,184,.18);
+  border-radius:14px;
+  padding:12px;
+}
+.route-width-title{
+  font-size:13px;
+  font-weight:800;
+  color:var(--text-main);
+  margin-bottom:8px;
+}
+.route-width-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
+}
+.route-width-table th,
+.route-width-table td{
+  padding:7px 6px;
+  border-bottom:1px solid rgba(148,163,184,.14);
+  color:var(--text-muted);
+  text-align:left;
+}
+.route-width-table th{
+  color:var(--text-main);
+  font-weight:800;
+}
+.width-chip{
+  display:inline-block;
+  width:12px;
+  height:12px;
+  border-radius:3px;
+  margin-right:6px;
+  vertical-align:-2px;
+}
+
+
+.route-width-detail-panel{
+  position:absolute;
+  right:18px;
+  bottom:28px;
+  z-index:700;
+  width:420px;
+  max-height:360px;
+  overflow:hidden;
+  background:rgba(15,23,42,.94);
+  border:1px solid rgba(148,163,184,.22);
+  border-radius:18px;
+  box-shadow:0 18px 45px rgba(0,0,0,.35);
+  padding:12px;
+  display:none;
+}
+.route-width-detail-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:8px;
+}
+.route-width-detail-title{
+  font-size:13px;
+  font-weight:900;
+  color:var(--text-main);
+}
+.route-width-detail-sub{
+  font-size:11px;
+  color:var(--text-dim);
+  margin-top:2px;
+}
+.route-width-detail-close{
+  border:0;
+  background:rgba(239,68,68,.15);
+  color:#fecaca;
+  padding:5px 8px;
+  border-radius:9px;
+  cursor:pointer;
+}
+.route-width-detail-scroll{
+  max-height:285px;
+  overflow:auto;
+}
+.route-width-detail-table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:11px;
+}
+.route-width-detail-table th,
+.route-width-detail-table td{
+  padding:7px 6px;
+  border-bottom:1px solid rgba(148,163,184,.14);
+  color:var(--text-muted);
+  text-align:left;
+  vertical-align:top;
+}
+.route-width-detail-table th{
+  position:sticky;
+  top:0;
+  background:rgba(15,23,42,.98);
+  color:var(--text-main);
+  font-weight:900;
+  z-index:1;
+}
+.route-color-box{
+  display:inline-block;
+  width:14px;
+  height:14px;
+  border-radius:4px;
+  border:1px solid rgba(255,255,255,.35);
+}
+
+
+/* ── THEME ALIGNMENT: Login + Dashboard + Map ── */
+.sidebar-header {
+  background: linear-gradient(135deg, rgba(245,158,11,0.10), rgba(59,130,246,0.06));
+}
+
+.logo-icon {
+  background: linear-gradient(135deg, var(--accent), #d97706);
+  color: #111827;
+  font-weight: 900;
+}
+
+.logo-text h2 {
+  font-weight: 900;
+  letter-spacing: -0.3px;
+}
+
+.sidebar-footer {
+  background: rgba(7,11,18,0.35);
+}
+
+.footer-btn {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  white-space: nowrap;
+}
+
+.nav-footer-links {
+  margin-bottom: 2px;
+}
+
+.nav-footer-links .footer-btn.primary {
+  background: var(--accent);
+  color: #111827;
+  border-color: var(--accent);
+}
+
+.nav-footer-links .footer-btn.primary:hover {
+  background: #d97706;
+}
+
+.nav-footer-links .footer-btn:not(.primary) {
+  background: rgba(30,41,59,0.92);
+}
+
+
+/* ── SAME NAVBAR AS MAIN DASHBOARD ── */
+.map-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 74px;
+  z-index: 4500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  background: rgba(7,11,18,0.88);
+  border-bottom: 1px solid var(--border-med);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 14px 34px rgba(0,0,0,0.28);
+}
+
+.map-topbar .brand {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.top-logo {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(245,158,11,0.20), rgba(59,130,246,0.14));
+  color: #f8fafc;
+  border: 1px solid rgba(255,255,255,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 23px;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.24);
+}
+
+.map-topbar h1 {
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: -0.3px;
+  margin: 0;
+  color: var(--text);
+}
+
+.map-topbar p {
+  color: var(--text-muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.top-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 15px;
+  border-radius: 999px;
+  border: 1px solid var(--border-med);
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 800;
+  transition: 0.16s;
+}
+
+.top-btn:hover {
+  background: var(--surface-light);
+  transform: translateY(-1px);
+}
+
+.top-btn.logout {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #111827;
+}
+
+.top-btn.logout:hover {
+  background: #d97706;
+}
+
+/* move sidebar below navbar */
+.sidebar {
+  top: 88px;
+}
+
+.dropdown-panel {
+  top: 88px;
+  max-height: calc(100vh - 106px);
+}
+
+@media (max-width: 760px) {
+  .map-topbar {
+    height: auto;
+    padding: 14px 16px;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .sidebar {
+    top: 132px;
+  }
+
+  .dropdown-panel {
+    top: 132px;
+    max-height: calc(100vh - 150px);
+  }
+}
+
+
+/* ── MAP VISUAL FIX: darker map + less navbar gap ── */
+.map-topbar {
+  height: 64px !important;
+  padding: 0 28px !important;
+  background: rgba(7,11,18,0.92) !important;
+}
+
+.sidebar {
+  top: 76px !important;
+  bottom: 12px !important;
+}
+
+.dropdown-panel {
+  top: 76px !important;
+  max-height: calc(100vh - 90px) !important;
+}
+
+/* Darken OSM map tiles slightly, but keep roads/labels readable */
+.leaflet-tile-pane {
+  filter: brightness(0.78) contrast(1.10) saturate(0.88);
+}
+
+.leaflet-overlay-pane,
+.leaflet-marker-pane,
+.leaflet-tooltip-pane,
+.leaflet-popup-pane {
+  filter: none !important;
+}
+
+/* Sidebar slightly more compact so empty space kam lage */
+.sidebar-header {
+  padding: 14px 16px 12px !important;
+}
+
+.nav-tabs {
+  padding: 8px 10px !important;
+}
+
+.nav-tab {
+  padding: 9px 12px !important;
+}
+
+.sidebar-footer {
+  padding: 10px 14px !important;
+}
+
+@media (max-width: 760px) {
+  .sidebar {
+    top: 118px !important;
+  }
+
+  .dropdown-panel {
+    top: 118px !important;
+    max-height: calc(100vh - 132px) !important;
+  }
+}
+
+
+/* ── MERGE SIDEBAR WITH TOP NAVBAR ── */
+.sidebar {
+  top: 64px !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  border-radius: 0 0 20px 0 !important;
+  border-left: 0 !important;
+  border-top: 1px solid var(--border-med) !important;
+}
+
+.dropdown-panel {
+  top: 64px !important;
+  left: 266px !important;
+  max-height: calc(100vh - 64px) !important;
+  border-radius: 0 14px 14px 0 !important;
+}
+
+.sidebar-header {
+  padding-top: 12px !important;
+}
+
+.nav-tabs {
+  padding-top: 10px !important;
+}
+
+.map-topbar {
+  height: 64px !important;
+}
+
+@media (max-width: 760px) {
+  .sidebar {
+    top: 116px !important;
+  }
+
+  .dropdown-panel {
+    top: 116px !important;
+    left: 0 !important;
+    max-height: calc(100vh - 116px) !important;
+  }
+}
+
+
+/* ── STRAIGHT SIDEBAR EDGES ── */
+.sidebar {
+  border-radius: 0 !important;
+}
+
+.dropdown-panel {
+  border-radius: 0 14px 14px 0 !important;
+}
+
+
+
+</style>
+</head>
+<body>
+<header class="map-topbar">
+  <div class="brand">
+    <div class="top-logo">🗺️</div>
+    <div>
+      <h1>GIS Digital Twin & Analyser</h1>
+      <p>GIS Map Dashboard</p>
+    </div>
+  </div>
+
+  <nav class="top-actions">
+    <a class="top-btn" href="{% url 'main_dashboard' %}">Main Dashboard</a>
+    <a class="top-btn logout" href="{% url 'logout' %}">Logout</a>
+  </nav>
+</header>
+
+
+<!-- MAP -->
+<div id="map"></div>
+
+<!-- Service Edit Popup -->
+<div id="serviceEditModal" class="service-edit-modal">
+  <div class="service-edit-card">
+    <div class="service-edit-head">
+      <div>
+        <div class="service-edit-title">Edit Service</div>
+        <div style="font-size:12px;color:var(--text-dim)">Change details, location, then Apply Changes</div>
+      </div>
+      <button id="editServiceCloseBtn" class="service-edit-close">✕</button>
+    </div>
+
+    <input type="hidden" id="editServiceId">
+
+    <label class="dp-label">Service Name</label>
+    <input type="text" id="editServiceName" class="form-input">
+
+    <div class="form-row">
+      <div>
+        <label class="dp-label">Type</label>
+        <select id="editServiceType" class="form-input">
+          <option value="hospital">Hospital</option>
+          <option value="hospital_govt">Govt Hospital</option>
+          <option value="hospital_private">Private Hospital</option>
+          <option value="clinic">Clinic</option>
+          <option value="pharmacy">Pharmacy</option>
+          <option value="school">School</option>
+          <option value="college">College</option>
+          <option value="university">University</option>
+          <option value="petrol_pump">Petrol Pump / Fuel Station</option>
+          <option value="charging_station">EV Charging Station</option>
+          <option value="village">Village</option>
+          <option value="sector">Sector</option>
+          <option value="temple">Temple</option>
+          <option value="gurudwara">Gurudwara</option>
+          <option value="mosque">Mosque</option>
+          <option value="church">Church</option>
+          <option value="police_station">Police Station</option>
+          <option value="fire_station">Fire Station</option>
+          <option value="bus_stop">Bus Stop</option>
+          <option value="railway_station">Railway Station</option>
+          <option value="airport">Airport</option>
+          <option value="parking">Parking</option>
+          <option value="bank">Bank</option>
+          <option value="atm">ATM</option>
+          <option value="government_office">Government Office</option>
+          <option value="market">Market</option>
+          <option value="park">Park</option>
+          <option value="water_body">Water Body</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div>
+        <label class="dp-label">Region</label>
+        <select id="editServiceRegion" class="form-input">
+          <option value="">Select Region</option>
+          <option value="Chandigarh">Chandigarh</option>
+          <option value="Andhra Pradesh">Andhra Pradesh</option>
+          <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+          <option value="Assam">Assam</option>
+          <option value="Bihar">Bihar</option>
+          <option value="Chhattisgarh">Chhattisgarh</option>
+          <option value="Goa">Goa</option>
+          <option value="Gujarat">Gujarat</option>
+          <option value="Haryana">Haryana</option>
+          <option value="Himachal Pradesh">Himachal Pradesh</option>
+          <option value="Jharkhand">Jharkhand</option>
+          <option value="Karnataka">Karnataka</option>
+          <option value="Kerala">Kerala</option>
+          <option value="Madhya Pradesh">Madhya Pradesh</option>
+          <option value="Maharashtra">Maharashtra</option>
+          <option value="Manipur">Manipur</option>
+          <option value="Meghalaya">Meghalaya</option>
+          <option value="Mizoram">Mizoram</option>
+          <option value="Nagaland">Nagaland</option>
+          <option value="Odisha">Odisha</option>
+          <option value="Punjab">Punjab</option>
+          <option value="Rajasthan">Rajasthan</option>
+          <option value="Sikkim">Sikkim</option>
+          <option value="Tamil Nadu">Tamil Nadu</option>
+          <option value="Telangana">Telangana</option>
+          <option value="Tripura">Tripura</option>
+          <option value="Uttar Pradesh">Uttar Pradesh</option>
+          <option value="Uttarakhand">Uttarakhand</option>
+          <option value="West Bengal">West Bengal</option>
+          <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option>
+          <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli and Daman and Diu</option>
+          <option value="Delhi">Delhi</option>
+          <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+          <option value="Ladakh">Ladakh</option>
+          <option value="Lakshadweep">Lakshadweep</option>
+          <option value="Puducherry">Puducherry</option>
+        </select>
+      </div>
+    </div>
+
+    <label class="dp-label">Country</label>
+    <select id="editServiceCountry" class="form-input">
+      <option value="">Select Country</option>
+      <option value="India">India</option>
+      <option value="Nepal">Nepal</option>
+      <option value="Bhutan">Bhutan</option>
+      <option value="Bangladesh">Bangladesh</option>
+      <option value="Sri Lanka">Sri Lanka</option>
+      <option value="Pakistan">Pakistan</option>
+      <option value="UAE">UAE</option>
+      <option value="USA">USA</option>
+      <option value="UK">UK</option>
+      <option value="Other">Other</option>
+    </select>
+
+    <div class="form-row">
+      <div>
+        <label class="dp-label">Latitude</label>
+        <input type="number" step="any" id="editServiceLatitude" class="form-input">
+      </div>
+      <div>
+        <label class="dp-label">Longitude</label>
+        <input type="number" step="any" id="editServiceLongitude" class="form-input">
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button id="editUseMapCenterBtn" class="btn">Use Center</button>
+      <button id="editPickMapBtn" class="btn">Pick Map</button>
+      <button id="editEnableDragBtn" class="btn">Enable Drag</button>
+    </div>
+
+    <div class="btn-row" style="margin-top:10px">
+      <button id="editApplyBtn" class="btn primary">Apply Changes</button>
+      <button id="editCancelBtn" class="btn">Cancel</button>
+    </div>
+
+    <p id="editServiceMessage" class="service-edit-msg"></p>
+  </div>
+</div>
+
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  
+
+  <div class="nav-tabs">
+    <div class="nav-tab" data-panel="panel-services">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></svg>
+      Services
+    </div>
+    <div class="nav-tab" data-panel="panel-route">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="3 17 9 11 13 15 21 7"/></svg>
+      Route Planner
+    </div>
+    <div class="nav-tab" data-panel="panel-hospitals">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><path d="M12 12v4M10 14h4"/></svg>
+      Hospital Analysis
+    </div>
+    <div class="nav-tab" data-panel="panel-petrol">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 22V8l7-6 7 6v14"/><path d="M21 8h-4v5h4"/><line x1="10" y1="22" x2="10" y2="12"/><line x1="14" y1="22" x2="14" y2="12"/><rect x="6" y="12" width="8" height="10"/></svg>
+      Petrol Pumps
+    </div>
+    <div class="nav-tab" data-panel="panel-layers">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+      Layers
+    </div>
+    <div class="nav-tab" data-panel="panel-nearest">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+      Nearest Lines
+    </div>
+    <div class="nav-tab" data-panel="panel-saved-routes">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      Saved Routes
+    </div>
+    <div class="nav-tab" data-panel="panel-legend">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Legend
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <div id="statusBadge">✓ Ready</div>
+    <div class="footer-btns">
+      <button id="fitChandigarhBtn" class="footer-btn primary">⌖ Focus</button>
+      <button id="clearMapBtn" class="footer-btn">✕ Clear</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DROPDOWN PANELS ══ -->
+
+<!-- SERVICES -->
+<div class="dropdown-panel" id="panel-services">
+  <div class="dp-section">
+    <div class="dp-title">Service Management</div>
+    <input type="hidden" id="serviceId">
+    <label class="dp-label">Service Name</label>
+    <input type="text" id="serviceName" placeholder="Enter service name" class="form-input">
+    <div class="form-row">
+      <div>
+        <label class="dp-label">Type</label>
+        <select id="serviceType" class="form-input">
+          <option value="hospital">Hospital</option>
+          <option value="hospital_govt">Govt Hospital</option>
+          <option value="hospital_private">Private Hospital</option>
+          <option value="clinic">Clinic</option>
+          <option value="pharmacy">Pharmacy</option>
+          <option value="school">School</option>
+          <option value="college">College</option>
+          <option value="university">University</option>
+          <option value="petrol_pump">Petrol Pump / Fuel Station</option>
+          <option value="charging_station">EV Charging Station</option>
+          <option value="village">Village</option>
+          <option value="sector">Sector</option>
+          <option value="temple">Temple</option>
+          <option value="gurudwara">Gurudwara</option>
+          <option value="mosque">Mosque</option>
+          <option value="church">Church</option>
+          <option value="police_station">Police Station</option>
+          <option value="fire_station">Fire Station</option>
+          <option value="bus_stop">Bus Stop</option>
+          <option value="railway_station">Railway Station</option>
+          <option value="airport">Airport</option>
+          <option value="parking">Parking</option>
+          <option value="bank">Bank</option>
+          <option value="atm">ATM</option>
+          <option value="government_office">Government Office</option>
+          <option value="market">Market</option>
+          <option value="park">Park</option>
+          <option value="water_body">Water Body</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div>
+        <label class="dp-label">Region</label>
+        <select id="serviceRegion" class="form-input">
+          <option value="Chandigarh">Chandigarh</option>
+          <option value="Andhra Pradesh">Andhra Pradesh</option>
+          <option value="Arunachal Pradesh">Arunachal Pradesh</option>
+          <option value="Assam">Assam</option>
+          <option value="Bihar">Bihar</option>
+          <option value="Chhattisgarh">Chhattisgarh</option>
+          <option value="Goa">Goa</option>
+          <option value="Gujarat">Gujarat</option>
+          <option value="Haryana">Haryana</option>
+          <option value="Himachal Pradesh">Himachal Pradesh</option>
+          <option value="Jharkhand">Jharkhand</option>
+          <option value="Karnataka">Karnataka</option>
+          <option value="Kerala">Kerala</option>
+          <option value="Madhya Pradesh">Madhya Pradesh</option>
+          <option value="Maharashtra">Maharashtra</option>
+          <option value="Manipur">Manipur</option>
+          <option value="Meghalaya">Meghalaya</option>
+          <option value="Mizoram">Mizoram</option>
+          <option value="Nagaland">Nagaland</option>
+          <option value="Odisha">Odisha</option>
+          <option value="Punjab">Punjab</option>
+          <option value="Rajasthan">Rajasthan</option>
+          <option value="Sikkim">Sikkim</option>
+          <option value="Tamil Nadu">Tamil Nadu</option>
+          <option value="Telangana">Telangana</option>
+          <option value="Tripura">Tripura</option>
+          <option value="Uttar Pradesh">Uttar Pradesh</option>
+          <option value="Uttarakhand">Uttarakhand</option>
+          <option value="West Bengal">West Bengal</option>
+          <option value="Andaman and Nicobar Islands">Andaman and Nicobar Islands</option>
+          <option value="Dadra and Nagar Haveli and Daman and Diu">Dadra and Nagar Haveli and Daman and Diu</option>
+          <option value="Delhi">Delhi</option>
+          <option value="Jammu and Kashmir">Jammu and Kashmir</option>
+          <option value="Ladakh">Ladakh</option>
+          <option value="Lakshadweep">Lakshadweep</option>
+          <option value="Puducherry">Puducherry</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label class="dp-label">Country</label>
+        <select id="serviceCountry" class="form-input">
+          <option value="India">India</option>
+          <option value="Nepal">Nepal</option>
+          <option value="Bhutan">Bhutan</option>
+          <option value="Bangladesh">Bangladesh</option>
+          <option value="Sri Lanka">Sri Lanka</option>
+          <option value="Pakistan">Pakistan</option>
+          <option value="UAE">UAE</option>
+          <option value="USA">USA</option>
+          <option value="UK">UK</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div>
+        <label class="dp-label">Coordinates</label>
+        <div class="btn-row" style="margin-top:0">
+          <button id="useMapCenterBtn" class="btn" style="flex:1;border-radius:var(--radius-sm)">Use Map Center</button>
+          <button id="pickServiceMapBtn" class="btn" style="flex:1;border-radius:var(--radius-sm)">Pick From Map</button>
+        </div>
+      </div>
+    </div>
+    <div class="form-row">
+      <div>
+        <label class="dp-label">Latitude</label>
+        <input type="number" step="any" id="serviceLatitude" placeholder="30.7333" class="form-input">
+      </div>
+      <div>
+        <label class="dp-label">Longitude</label>
+        <input type="number" step="any" id="serviceLongitude" placeholder="76.7794" class="form-input">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button id="saveServiceBtn" class="btn primary">Save Service</button>
+      <button id="clearServiceBtn" class="btn">Clear Form</button>
+      <button id="lockServiceBtn" class="btn">Lock Marker</button>
+    </div>
+    <p class="helper">Markers locked by default. Click <strong style="color:var(--accent)">Edit</strong> in table to enable dragging.</p>
+    <p id="serviceMessage" class="msg"></p>
+  </div>
+  <div class="dp-section">
+    <div class="dp-title">Services Table</div>
+    <div class="service-table-wrap">
+      <table class="service-table">
+        <thead><tr><th>Name</th><th>Type</th><th>Region</th><th>Action</th></tr></thead>
+        <tbody id="serviceTableBody"><tr><td colspan="4" style="color:var(--text-dim)">No services loaded</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+
+<!-- ROUTE PLANNER -->
+<div class="dropdown-panel wide" id="panel-route">
+  <div class="dp-section">
+    <div class="dp-title">Service Route</div>
+    <label class="dp-label">Origin Service</label>
+    <select id="routeOriginService" class="form-input"><option value="">Select origin service</option></select>
+    <label class="dp-label">Destination Service</label>
+    <select id="routeDestinationService" class="form-input"><option value="">Select destination service</option></select>
+    <label class="dp-label">Route Cost</label>
+    <select id="routeCostBy" class="form-input">
+      <option value="distance">Shortest Distance</option>
+      <option value="time">Fastest Time</option>
+    </select>
+<div class="btn-row">
+      <button id="findRouteBtn" class="btn primary">Find Route</button>
+      <button id="clearRouteBtn" class="btn">Clear Route</button>
+    </div>
+  </div>
+
+  <div class="dp-section">
+    <div class="dp-title">Multi-stop Route</div>
+    <select id="multiStopServiceSelect" class="form-input"><option value="">Select service to add</option></select>
+    <div class="btn-row">
+      <button id="addMultiStopBtn" class="btn primary">Add Stop</button>
+      <button id="clearMultiStopsBtn" class="btn">Clear Stops</button>
+    </div>
+    <div id="multiStopList" style="margin-top:8px">No stops selected</div>
+    <div class="btn-row" style="margin-top:8px">
+      <button id="findMultiStopRouteBtn" class="btn accent">Find Multi-stop Route</button>
+    </div>
+  </div>
+
+  <div class="dp-section">
+    <div class="dp-title">Anywhere Route (Map Click)</div>
+    <div class="btn-row">
+      <button id="setOriginClickBtn" class="btn primary">Set Origin Click</button>
+      <button id="setDestinationClickBtn" class="btn primary">Set Destination Click</button>
+    </div>
+    <div class="form-row" style="margin-top:8px">
+      <div><label class="dp-label">Origin Lat</label><input type="text" id="coordOriginLat" class="form-input" readonly placeholder="Click origin"></div>
+      <div><label class="dp-label">Origin Lng</label><input type="text" id="coordOriginLng" class="form-input" readonly placeholder="Click origin"></div>
+    </div>
+    <div class="form-row">
+      <div><label class="dp-label">Dest Lat</label><input type="text" id="coordDestinationLat" class="form-input" readonly placeholder="Click dest"></div>
+      <div><label class="dp-label">Dest Lng</label><input type="text" id="coordDestinationLng" class="form-input" readonly placeholder="Click dest"></div>
+    </div>
+    <div class="btn-row">
+      <button id="findCoordRouteBtn" class="btn primary">Find Click Route</button>
+      <button id="clearCoordPointsBtn" class="btn">Clear Points</button>
+    </div>
+  </div>
+
+  <!-- <div class="dp-section">
+    <div class="dp-title">Road Blocking</div>
+    <div class="btn-row">
+      <button id="roadBlockModeBtn" class="btn danger">Block Road Mode</button>
+      <button id="roadUnblockModeBtn" class="btn">Unblock Road Mode</button>
+    </div> -->
+    <!-- <p class="helper">Click a road after selecting mode. Blocked roads are avoided by routing.</p>
+    <p id="routeMessage" class="msg"></p>
+    <div id="routeSummary" class="route-summary-grid" style="display:none">
+      <div class="rscard"><div class="rl">Distance</div><div class="rv" id="routeDistance">-</div></div>
+      <div class="rscard"><div class="rl">Time</div><div class="rv" id="routeTime">-</div></div>
+      <div class="rscard"><div class="rl">Edges</div><div class="rv" id="routeEdges">-</div></div>
+      <div class="rscard"><div class="rl">Snap</div><div class="rv" id="routeSnap">-</div></div>
+    </div> -->
+
+    <!-- Visible Route Result Summary -->
+    <p id="routeMessage" class="msg"></p>
+    <div id="routeSummary" class="route-summary-grid" style="display:none">
+      <div class="rscard"><div class="rl">Distance</div><div class="rv" id="routeDistance">-</div></div>
+      <div class="rscard"><div class="rl">Time</div><div class="rv" id="routeTime">-</div></div>
+      <div class="rscard"><div class="rl">Edges</div><div class="rv" id="routeEdges">-</div></div>
+      <div class="rscard"><div class="rl">Snap</div><div class="rv" id="routeSnap">-</div></div>
+    </div>
+
+    <div id="routeWidthSummary" class="route-width-summary" style="display:none">
+      <div class="route-width-title">Route Width Summary</div>
+      <table class="route-width-table">
+        <thead>
+          <tr>
+            <th>Width Type</th>
+            <th>Distance</th>
+            <th>Edges</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="width-chip" style="background:#16a34a"></span>5m+ Wide Road</td>
+            <td id="width5Km">-</td>
+            <td id="width5Edges">-</td>
+          </tr>
+          <tr>
+            <td><span class="width-chip" style="background:#f59e0b"></span>4m–5m Road</td>
+            <td id="width4Km">-</td>
+            <td id="width4Edges">-</td>
+          </tr>
+          <tr>
+            <td><span class="width-chip" style="background:#ef4444"></span>Below 4m Road</td>
+            <td id="widthBelow4Km">-</td>
+            <td id="widthBelow4Edges">-</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- HOSPITAL ANALYSIS -->
+<div class="dropdown-panel" id="panel-hospitals">
+  <div class="dp-section">
+    <div class="dp-title">Hospital Filter</div>
+    <label class="dp-label">Display Type</label>
+    <select id="hospitalType" class="form-input">
+      <option value="none">None</option>
+      <option value="all">All Hospitals</option>
+      <option value="govt">Government Hospitals</option>
+      <option value="private">Private Hospitals</option>
+    </select>
+    <label class="dp-label">Coverage Buffer</label>
+    <select id="bufferKm" class="form-input">
+      <option value="none">None</option>
+      <option value="all">All Buffers</option>
+      <option value="1">1 km Buffer</option>
+      <option value="2">2 km Buffer</option>
+    </select>
+    <p class="helper">Load hospital points and 1 km / 2 km coverage buffers.</p>
+  </div>
+</div>
+
+<!-- PETROL PUMPS -->
+<div class="dropdown-panel" id="panel-petrol">
+  <div class="dp-section">
+    <div class="dp-title">Petrol Pump Layers</div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" id="togglePetrolPumps"> Petrol Pumps</label>
+      <label class="check-item"><input type="checkbox" id="toggleSectorPetrol"> Sector → Nearest</label>
+      <label class="check-item"><input type="checkbox" id="toggleVillagePetrol"> Village → Nearest</label>
+    </div>
+    <label class="dp-label">Coverage Buffer</label>
+    <select id="petrolBufferKm" class="form-input">
+      <option value="none">None</option>
+      <option value="all">All Buffers</option>
+      <option value="1">1 km Buffer</option>
+      <option value="2">2 km Buffer</option>
+    </select>
+    <p class="helper">Load petrol pump points and coverage buffers.</p>
+  </div>
+</div>
+
+<!-- LAYERS -->
+<div class="dropdown-panel" id="panel-layers">
+  <div class="dp-section">
+    <div class="dp-title">Service Layers</div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" id="toggleSchools"> Schools</label>
+      <label class="check-item"><input type="checkbox" id="toggleColleges"> Colleges</label>
+      <label class="check-item"><input type="checkbox" id="toggleRoads"> Roads</label>
+<label class="check-item"><input type="checkbox" id="togglePoliceStations"> Police Stations</label>
+      <label class="check-item"><input type="checkbox" id="toggleRailwayStations"> Railway Stations</label>
+      <label class="check-item"><input type="checkbox" id="toggleBusStands"> Bus Stands</label>
+      <label class="check-item"><input type="checkbox" id="toggleManualServices"> Manual Services</label>
+    </div>
+  </div>
+  <div class="dp-section">
+    <div class="dp-title">Demand Layers</div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" id="toggleVillages"> Villages</label>
+<label class="check-item"><input type="checkbox" id="toggleUncovered"> Uncovered</label>
+      <label class="check-item"><input type="checkbox" id="toggleSectors"> Sectors</label>
+    </div>
+  </div>
+  <div class="dp-section">
+    <div class="dp-title">Boundary Layers</div>
+    <div class="check-grid">
+      <label class="check-item"><input type="checkbox" id="toggleBoundary" checked> Chandigarh Boundary</label>
+      <label class="check-item"><input type="checkbox" id="toggleSectorBoundary" checked> Sector Boundary</label>
+    </div>
+  </div>
+</div>
+
+<!-- NEAREST LINES -->
+<div class="dropdown-panel" id="panel-nearest">
+  <div class="dp-section">
+    <div class="dp-title">Village Connections</div>
+    <div class="check-grid single">
+      <label class="check-item"><input type="checkbox" id="toggleVillageHospital"> Village → Hospital</label>
+      <label class="check-item"><input type="checkbox" id="toggleVillageSchool"> Village → School</label>
+      <label class="check-item"><input type="checkbox" id="toggleVillageCollege"> Village → College</label>
+    </div>
+  </div>
+  <div class="dp-section">
+    <div class="dp-title">Sector Connections</div>
+    <div class="check-grid single">
+      <label class="check-item"><input type="checkbox" id="toggleSectorHospital"> Sector → Hospital</label>
+      <label class="check-item"><input type="checkbox" id="toggleSectorSchool"> Sector → School</label>
+      <label class="check-item"><input type="checkbox" id="toggleSectorCollege"> Sector → College</label>
+    </div>
+  </div>
+</div>
+
+<!-- SAVED ROUTES -->
+<div class="dropdown-panel" id="panel-saved-routes">
+  <div class="dp-section">
+    <div class="dp-title">Route History</div>
+    <label class="check-item" style="margin-bottom:10px; border-radius:var(--radius-sm)">
+      <input type="checkbox" id="toggleSavedRoutesDirect"> Show Saved Routes
+    </label>
+    <button type="button" id="refreshSavedRoutesDirect" class="btn primary full" style="border-radius:var(--radius-sm)">Refresh Saved Routes</button>
+    <p class="helper">Shows saved routes from routing.route_cache.</p>
+  </div>
+</div>
+
+<!-- LEGEND -->
+<div class="dropdown-panel" id="panel-legend">
+  <div class="dp-section">
+    <div class="dp-title">Map Legend</div>
+    <div class="legend-grid">
+      <div class="legend-item"><div class="legend-icon">🏥</div>Hospital / Clinic</div>
+      <div class="legend-item"><div class="legend-icon">🏫</div>School</div>
+      <div class="legend-item"><div class="legend-icon">🎓</div>College / University</div>
+      <div class="legend-item"><div class="legend-icon">⛽</div>Petrol Pump / Fuel Station</div>
+      <div class="legend-item"><div class="legend-icon">👮</div>Police Station</div>
+      <div class="legend-item"><div class="legend-icon">🚉</div>Railway Station</div>
+      <div class="legend-item"><div class="legend-icon">🚌</div>Bus Stand</div>
+      <div class="legend-item"><div class="legend-icon">🏘️</div>Village</div>
+      <div class="legend-item"><div class="legend-icon">📍</div>Sector / Other Location</div>
+      <div class="legend-item"><div class="legend-line" style="background:#2563eb"></div>Active Route</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#6EC6FF"></div>1 km Buffer Zone</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#FFD166"></div>2 km Buffer Zone</div>
+      <div class="legend-item"><div class="legend-line" style="background:#8b7355"></div>Road Network</div>
+      <div class="legend-item"><div class="legend-line" style="background:#000000"></div>Chandigarh Boundary</div>
+      <div class="legend-item"><div class="legend-line" style="background:#064e3b"></div>Sector Boundary</div>
+    </div>
+  </div>
+</div>
+</div>
+
+<!-- ══ SCRIPTS ══ -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+// ── SIDEBAR DROPDOWN LOGIC ──
+(function(){
+  const tabs = document.querySelectorAll('.nav-tab[data-panel]');
+  const panels = document.querySelectorAll('.dropdown-panel');
+
+  function closeAll(){
+    panels.forEach(p => p.classList.remove('open'));
+    tabs.forEach(t => t.classList.remove('active'));
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', function(e){
+      e.stopPropagation();
+      const panelId = this.dataset.panel;
+      const panel = document.getElementById(panelId);
+      const isOpen = panel.classList.contains('open');
+      closeAll();
+      if(!isOpen){
+        panel.classList.add('open');
+        this.classList.add('active');
+        // Position panel next to the tab vertically
+        const rect = this.getBoundingClientRect();
+        const panelH = Math.min(window.innerHeight - 40, 600);
+        let top = rect.top;
+        if(top + panelH > window.innerHeight - 20) top = window.innerHeight - panelH - 20;
+        panel.style.top = Math.max(14, top) + 'px';
+      }
+    });
+  });
+
+  document.addEventListener('click', function(e){
+    /*
+      Panel auto-close fix:
+      Map par service add / route point select / layer check karte time
+      sidebar dropdown panel close nahi hona chahiye.
+    */
+
+    const clickedInsidePanel = e.target.closest('.dropdown-panel');
+    const clickedInsideSidebar = e.target.closest('.sidebar');
+    const clickedOnMap = e.target.closest('#map') || e.target.closest('.leaflet-container');
+
+    const activeMapMode =
+      document.body.classList.contains('route-clicking') ||
+      window.servicePickLocationMode ||
+      window.servicePickDocumentHandler ||
+      window.editServicePickHandler;
+
+    if(clickedInsidePanel || clickedInsideSidebar){
+      return;
+    }
+
+    if(clickedOnMap || activeMapMode){
+      return;
+    }
+
+    closeAll();
+  });
+})();
+</script>
+
+<script>
+// ══════════════════════════════════════════════════════════
+// COMPLETE FULL-FEATURED MAP LOGIC (from working version)
+// ══════════════════════════════════════════════════════════
+const map = L.map("map", {zoomControl: true, preferCanvas: true}).setView([30.7333, 76.7794], 12);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+  maxZoom: 19, attribution: "© OpenStreetMap contributors"
+}).addTo(map);
+
+map.createPane("chdMaskPane");
+map.getPane("chdMaskPane").style.zIndex = 650;
+map.getPane("chdMaskPane").style.pointerEvents = "none";
+
+// Manual service markers must stay above the dark boundary mask
+// otherwise the "Manual Services" layer looks enabled but markers remain hidden.
+map.createPane("manualServicesPane");
+map.getPane("manualServicesPane").style.zIndex = 690;
+map.getPane("manualServicesPane").style.pointerEvents = "auto";
+
+const statusBox = document.getElementById("statusBadge");
+const layers = {};
+let hospitalBufferLayer=null, petrolPumpBufferLayer=null, chdMaskLayer=null, manualServiceMarkers=[], manualServiceMarkerMap={},
+    selectedEditServiceId=null, currentServices=[], routeLayer=null, routeClickMode=null,
+    coordOrigin=null, coordDestination=null, coordOriginMarker=null, coordDestinationMarker=null,
+    pendingRouteClickHandler=null, roadBlockClickHandler=null, roadBlockPreviewLayer=null, roadInfoClickHandler=null, roadInfoPreviewLayer=null;
+
+function setStatus(m){
+  statusBox.innerText = m;
+  if(m.toLowerCase().includes('fail') || m.toLowerCase().includes('error')){
+    statusBox.style.background='rgba(239,68,68,0.1)'; statusBox.style.color='#ef4444'; statusBox.style.borderColor='rgba(239,68,68,0.22)';
+  } else if(m.toLowerCase().includes('load') || m.toLowerCase().includes('find')){
+    statusBox.style.background='rgba(245,158,11,0.1)'; statusBox.style.color='#f59e0b'; statusBox.style.borderColor='rgba(245,158,11,0.22)';
+  } else {
+    statusBox.style.background='rgba(16,185,129,0.1)'; statusBox.style.color='#10b981'; statusBox.style.borderColor='rgba(16,185,129,0.22)';
+  }
+}
+
+function setServiceMessage(m, isError=false){
+  const el=document.getElementById("serviceMessage");
+  el.innerText=m; el.style.color=isError?"#ef4444":"#10b981";
+  if(m) setStatus(m);
+}
+
+function escapeHtml(v){
+  if(v===null||v===undefined) return "";
+  return String(v).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
+}
+
+function getName(p){
+  return p.hospital_name || p.school_name || p.college_name || p.petrol_pump_name ||
+         p.name || p.sector_name || p.sector_nam || p.village_name ||
+         p.type || "GIS Data";
+}
+
+function cleanLabel(k){
+  const labels={
+    hospital_name:"Hospital Name",
+    school_name:"School Name",
+    college_name:"College Name",
+    petrol_pump_name:"Petrol Pump",
+    village_name:"Village Name",
+    sector_name:"Sector Name",
+    sector_nam:"Sector Name",
+    name:"Name",
+    type:"Type",
+    hospital_category:"Hospital Category",
+    district:"District",
+    population:"Population",
+    area_km2:"Area (km²)",
+    area:"Area",
+    nearest_hospital_km:"Nearest Hospital (km)",
+    nearest_school_km:"Nearest School (km)",
+    nearest_college_km:"Nearest College (km)",
+    nearest_petrol_pump_km:"Nearest Petrol Pump (km)",
+    demand_score:"Demand Score",
+    fuel_need_score:"Fuel Need Score",
+    coverage_status:"Coverage Status",
+    fuel_coverage_status:"Fuel Coverage",
+    buffer_km:"Buffer (km)",
+    ward_name:"Ward",
+    zone_name:"Zone",
+    amenity:"Amenity",
+    service_type:"Service Type",
+    status:"Status"
+  };
+  return labels[k] || k.replaceAll("_"," ").replace(/\b\w/g, c=>c.toUpperCase());
+}
+
+function isUsefulPopupField(k,v){
+  if(v===null || v===undefined || String(v).trim()==="") return false;
+
+  const hidden=[
+    "ogc_fid","fid","id","source_osm_id","osm_id","osm_type","source",
+    "geom","geom_4326","geometry","created_at","updated_at",
+    "latitude","longitude","source_layer","dashboard_use"
+  ];
+  if(hidden.includes(k)) return false;
+
+  const allowed=[
+    "hospital_name","school_name","college_name","petrol_pump_name",
+    "village_name","sector_name","sector_nam","name","type",
+    "hospital_category","district","population","area_km2","area",
+    "nearest_hospital_km","nearest_school_km","nearest_college_km",
+    "nearest_petrol_pump_km","demand_score","fuel_need_score",
+    "coverage_status","fuel_coverage_status","buffer_km",
+    "ward_name","zone_name","amenity","service_type","status"
+  ];
+  return allowed.includes(k);
+}
+
+function formatPopupValue(k,v){
+  if(v===null || v===undefined) return "";
+  const n=Number(v);
+  if(!isNaN(n) && String(v).trim()!=="" && [
+    "area","area_km2",
+    "nearest_hospital_km","nearest_school_km",
+    "nearest_college_km","nearest_petrol_pump_km"
+  ].includes(k)){
+    return n.toFixed(2);
+  }
+  return escapeHtml(v);
+}
+
+function popupContent(f){
+  const p=f.properties||{};
+  const title=escapeHtml(getName(p));
+
+  let rows="";
+  Object.keys(p).forEach(k=>{
+    if(!isUsefulPopupField(k,p[k])) return;
+    rows += `
+      <div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid rgba(148,163,184,.22);padding:5px 0">
+        <span style="color:#64748b;font-weight:700">${escapeHtml(cleanLabel(k))}</span>
+        <span style="color:#111827;font-weight:800;text-align:right">${formatPopupValue(k,p[k])}</span>
+      </div>`;
+  });
+
+  if(!rows){
+    rows='<div style="color:#64748b">No useful information available</div>';
+  }
+
+  return `
+    <div style="min-width:230px;font-family:Arial,sans-serif">
+      <div style="font-size:15px;font-weight:900;color:#0f172a;margin-bottom:6px">${title}</div>
+      <div style="font-size:12px">${rows}</div>
+    </div>`;
+}
+
+function shouldDisablePopupForUrl(url){
+  // Road popup is handled by /api/road-info/ nearest-road click logic.
+  return String(url || "").includes("/api/roads/");
+}
+
+function shouldDisableInteractionForUrl(url){
+  // Keep all layers interactive again.
+  // Popup visibility is controlled separately by shouldDisablePopupForUrl().
+  return false;
+}
+
+function pointStyle(c, r=6){ return {radius:r, fillColor:c, color:"rgba(255,255,255,0.35)", weight:1.2, opacity:1, fillOpacity:.92}; }
+
+function forceServiceTypeFromUrl(url){
+  const u = String(url || "").toLowerCase();
+
+  if(u.includes("/api/police-stations/")) return "police_station";
+  if(u.includes("/api/railway-stations/")) return "railway_station";
+  if(u.includes("/api/bus-stands/")) return "bus_stand";
+
+  return "";
+}
+
+
+function getServiceIconInfo(typeText){
+  const t = String(typeText || "").toLowerCase();
+
+  if(t.includes("hospital") || t.includes("clinic")) return {emoji:"🏥", color:"#dc2626"};
+  if(t.includes("school")) return {emoji:"🏫", color:"#2563eb"};
+  if(t.includes("college") || t.includes("university")) return {emoji:"🎓", color:"#7c3aed"};
+  if(t.includes("petrol") || t.includes("fuel") || t.includes("gas") || t.includes("charging")) return {emoji:"⛽", color:"#ea580c"};
+  if(t.includes("pharmacy")) return {emoji:"💊", color:"#16a34a"};
+  if(t.includes("village")) return {emoji:"🏘️", color:"#059669"};
+  if(t.includes("sector")) return {emoji:"📍", color:"#0f766e"};
+  if(t.includes("temple")) return {emoji:"🛕", color:"#ca8a04"};
+  if(t.includes("police")) return {emoji:"👮", color:"#1d4ed8"};
+  if(t.includes("fire")) return {emoji:"🚒", color:"#dc2626"};
+  if(t.includes("bus") || t.includes("bus_stand") || t.includes("bus station")) return {emoji:"🚌", color:"#0891b2"};
+  if(t.includes("railway") || t.includes("train")) return {emoji:"🚉", color:"#4b5563"};
+  if(t.includes("bank") || t.includes("atm")) return {emoji:"🏦", color:"#15803d"};
+  if(t.includes("park")) return {emoji:"🌳", color:"#16a34a"};
+
+  return {emoji:"📌", color:"#64748b"};
+}
+
+function createServiceTypeIcon(typeText, active=false){
+  const info = getServiceIconInfo(typeText);
+  const border = active ? "#10b981" : info.color;
+  const scale = active ? 34 : 30;
+
+  return L.divIcon({
+    className:"",
+    html:`<div style="
+      width:${scale}px;
+      height:${scale}px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#ffffff;
+      border:3px solid ${border};
+      border-radius:50%;
+      box-shadow:0 3px 12px rgba(0,0,0,.38);
+      font-size:${active ? 18 : 16}px;
+      line-height:1;
+    ">${info.emoji}</div>`,
+    iconSize:[scale,scale],
+    iconAnchor:[scale/2,scale/2],
+    popupAnchor:[0,-scale/2]
+  });
+}
+
+function inferFeatureType(feature, url){
+  const forcedType = forceServiceTypeFromUrl(url);
+  if(forcedType) return forcedType;
+
+  const p = feature.properties || {};
+  return [
+    p.type,
+    p.service_type,
+    p.amenity,
+    p.category,
+    p.name,
+    p.hospital_type,
+    p.source_layer,
+    url
+  ].filter(Boolean).join(" ");
+}
+
+function createGeoJsonLayer(url, styleFunction, pointColor, pointRadius=6){
+  const disablePopup = shouldDisablePopupForUrl(url);
+  const disableInteraction = shouldDisableInteractionForUrl(url);
+  return fetch(url).then(r=>r.json()).then(data=>L.geoJSON(data,{
+    style: styleFunction||undefined,
+    pointToLayer: (f,latlng) => L.marker(latlng, {icon:createServiceTypeIcon(inferFeatureType(f, url))}),
+    onEachFeature: (f,l) => {
+      if(!disablePopup) l.bindPopup(popupContent(f), {maxWidth:320});
+      l.on("click", function(e){
+        if(routeClickMode){
+          if(routeClickMode==="origin"){ setCoordOrigin(e.latlng); setRouteMessage("Origin point selected"); }
+          else if(routeClickMode==="destination"){ setCoordDestination(e.latlng); setRouteMessage("Destination point selected"); }
+          routeClickMode=null; clearRouteButtonActiveState();
+          if(pendingRouteClickHandler){ map.off("click",pendingRouteClickHandler); pendingRouteClickHandler=null; }
+          if(e.originalEvent) L.DomEvent.stop(e.originalEvent);
+        }
+      });
+    }
+  }));
+}
+
+function fuelGapLineStyle(f){
+  const score=Number(f.properties.fuel_need_score||1);
+  if(score>=4) return {color:"#dc2626",weight:3,opacity:.9,dashArray:"6 4"};
+  if(score===3) return {color:"#f97316",weight:3,opacity:.9,dashArray:"6 4"};
+  if(score===2) return {color:"#d97706",weight:2.5,opacity:.85,dashArray:"4 4"};
+  return {color:"#16a34a",weight:2,opacity:.8};
+}
+
+function geoJsonRingToLatLngs(ring){
+  return ring.map(pt => [pt[1], pt[0]]);
+}
+
+function extractBoundaryHoles(geojson){
+  const holes = [];
+
+  (geojson.features || []).forEach(f => {
+    const g = f.geometry;
+    if(!g) return;
+
+    if(g.type === "Polygon" && g.coordinates && g.coordinates[0]){
+      holes.push(geoJsonRingToLatLngs(g.coordinates[0]));
+    }
+
+    if(g.type === "MultiPolygon"){
+      (g.coordinates || []).forEach(poly => {
+        if(poly && poly[0]){
+          holes.push(geoJsonRingToLatLngs(poly[0]));
+        }
+      });
+    }
+  });
+
+  return holes;
+}
+
+function loadChandigarhMask(){
+  fetch("/api/chandigarh-boundary/")
+    .then(r => r.json())
+    .then(data => {
+      if(chdMaskLayer && map.hasLayer(chdMaskLayer)){
+        map.removeLayer(chdMaskLayer);
+      }
+
+      const worldRing = [
+        [90, -180],
+        [90, 180],
+        [-90, 180],
+        [-90, -180],
+        [90, -180]
+      ];
+
+      const holes = extractBoundaryHoles(data);
+
+      if(!holes.length){
+        console.warn("Chandigarh mask: boundary hole not found");
+        return;
+      }
+
+      chdMaskLayer = L.polygon([worldRing, ...holes], {
+        pane: "chdMaskPane",
+        stroke: false,
+        fillColor: "#020617",
+        fillOpacity: 0.90,
+        fillRule: "evenodd",
+        interactive: false
+      }).addTo(map);
+
+      const boundaryLayer = L.geoJSON(data);
+      const chdBounds = boundaryLayer.getBounds();
+
+      // Lock map movement around Chandigarh only
+      map.setMaxBounds(chdBounds.pad(0.15));
+      map.options.maxBoundsViscosity = 1.0;
+      map.setMinZoom(11);
+
+      map.fitBounds(chdBounds, {padding:[20,20], maxZoom:12});
+    })
+    .catch(e => console.error("Chandigarh mask failed", e));
+}
+
+const layerDefs = {
+  govtHospitals:    {url:"/api/govt-hospitals/",pointColor:"#dc2626",pointRadius:7},
+  privateHospitals: {url:"/api/private-hospitals/",pointColor:"#f97316",pointRadius:6},
+  petrolPumps:      {url:"/api/petrol-pumps/",pointColor:"#f59e0b",pointRadius:6},
+  policeStations:   {url:"/api/police-stations/",pointColor:"#1d4ed8",pointRadius:6},
+  railwayStations:  {url:"/api/railway-stations/",pointColor:"#4b5563",pointRadius:6},
+  busStands:        {url:"/api/bus-stands/",pointColor:"#0891b2",pointRadius:6},
+
+  sectorPetrol:     {url:"/api/sector-nearest-petrol-pump/",style:fuelGapLineStyle,pointColor:"#f97316",pointRadius:5},
+  villagePetrol:    {url:"/api/village-nearest-petrol-pump/",style:fuelGapLineStyle,pointColor:"#f97316",pointRadius:5},
+  schools:          {url:"/api/schools/",pointColor:"#3b82f6",pointRadius:5},
+  colleges:         {url:"/api/colleges/",pointColor:"#7c3aed",pointRadius:5},
+  roads:            {url:"/api/roads/",pointColor:"#8b7355",style:()=>({color:"#8b7355",weight:1.8,opacity:.85})},
+  villages:         {url:"/api/villages-demand/",pointColor:"#10b981",pointRadius:6},
+  uncovered:       {url:"/api/uncovered-villages/",pointColor:"#ef4444",pointRadius:8},
+  sectors:          {url:"/api/sectors-demand/",pointColor:"#0891b2",pointRadius:5},
+  boundary:         {url:"/api/chandigarh-boundary/",pointColor:"#000000",style:()=>({color:"#000000",weight:3,fillOpacity:0})},
+  sectorBoundary:   {url:"/api/sector-boundary/",pointColor:"#064e3b",style:()=>({color:"#064e3b",weight:2,fillOpacity:0})},
+  villageHospital:  {url:"/api/village-nearest-hospital/",pointColor:"#dc2626",style:()=>({color:"#dc2626",weight:2,opacity:.85,dashArray:"6,6"})},
+  villageSchool:    {url:"/api/village-nearest-school/",pointColor:"#3b82f6",style:()=>({color:"#3b82f6",weight:2,opacity:.85,dashArray:"6,6"})},
+  villageCollege:   {url:"/api/village-nearest-college/",pointColor:"#7c3aed",style:()=>({color:"#7c3aed",weight:2,opacity:.85,dashArray:"6,6"})},
+  sectorHospital:   {url:"/api/sector-nearest-hospital/",pointColor:"#b91c1c",style:()=>({color:"#b91c1c",weight:1.5,opacity:.75})},
+  sectorSchool:     {url:"/api/sector-nearest-school/",pointColor:"#1d4ed8",style:()=>({color:"#1d4ed8",weight:1.5,opacity:.75})},
+  sectorCollege:    {url:"/api/sector-nearest-college/",pointColor:"#6d28d9",style:()=>({color:"#6d28d9",weight:1.5,opacity:.75})}
+};
+
+
+function showFullRoadLoadingMessage(){
+  const box = document.getElementById("roadLoadingToast");
+  if(!box) return;
+  box.classList.add("show");
+}
+
+function hideFullRoadLoadingMessage(){
+  const box = document.getElementById("roadLoadingToast");
+  if(!box) return;
+  setTimeout(()=>box.classList.remove("show"), 900);
+}
+
+
+
+function showFullRoadLoadingMessage(){
+  const box = document.getElementById("roadLoadingToast");
+  if(!box) return;
+  box.classList.add("show");
+}
+
+function hideFullRoadLoadingMessage(){
+  const box = document.getElementById("roadLoadingToast");
+  if(!box) return;
+  setTimeout(()=>box.classList.remove("show"), 900);
+}
+
+function loadLayer(key){
+  if(layers[key]) return Promise.resolve(layers[key]);
+  const d=layerDefs[key]; if(!d) return Promise.reject(`Layer not found: ${key}`);
+  setStatus(`Loading ${key}...`);
+  return createGeoJsonLayer(d.url,d.style,d.pointColor,d.pointRadius||6).then(layer=>{
+    layers[key]=layer; setStatus(`${key} loaded`); return layer;
+  });
+}
+
+function showLayer(key){
+  loadLayer(key).then(layer=>{
+    if(!map.hasLayer(layer)) layer.addTo(map);
+    setStatus(`${key} visible`);
+  }).catch(e=>{ console.error(e); setStatus(`Failed to load ${key}`); });
+}
+
+function hideLayer(key){ if(layers[key]&&map.hasLayer(layers[key])) map.removeLayer(layers[key]); }
+
+function bindCheckbox(id,key){
+  document.getElementById(id).addEventListener("change",function(){ this.checked?showLayer(key):hideLayer(key); });
+}
+
+// ── HOSPITAL ANALYSIS ──
+function updateHospitalVisibility(){
+  const t=document.getElementById("hospitalType").value;
+  hideLayer("govtHospitals"); hideLayer("privateHospitals");
+  if(t==="all"){ showLayer("govtHospitals"); showLayer("privateHospitals"); }
+  else if(t==="govt") showLayer("govtHospitals");
+  else if(t==="private") showLayer("privateHospitals");
+  else setStatus("Hospital layer hidden");
+}
+
+function updateBufferLayer(){
+  if(hospitalBufferLayer&&map.hasLayer(hospitalBufferLayer)) map.removeLayer(hospitalBufferLayer);
+  hospitalBufferLayer=null;
+  const v=document.getElementById("bufferKm").value;
+  if(v==="none"){ setStatus("Hospital buffer hidden"); return; }
+  let url="/api/hospital-buffers/"; if(v==="1"||v==="2") url+=`?buffer_km=${v}`;
+  setStatus("Loading hospital buffer...");
+  createGeoJsonLayer(url, f=>String(f.properties.buffer_km)==="1"
+    ?{color:"#0077B6",weight:2.2,fillColor:"#6EC6FF",fillOpacity:.20}
+    :{color:"#D98C00",weight:2.2,fillColor:"#FFD166",fillOpacity:0}, "#6EC6FF")
+    .then(layer=>{ hospitalBufferLayer=layer; layer.addTo(map); setStatus("Hospital buffer visible"); })
+    .catch(e=>{ console.error(e); setStatus("Hospital buffer failed"); });
+}
+
+// ── PETROL PUMP BUFFER ──
+function updatePetrolPumpBufferLayer(){
+  if(petrolPumpBufferLayer&&map.hasLayer(petrolPumpBufferLayer)) map.removeLayer(petrolPumpBufferLayer);
+  petrolPumpBufferLayer=null;
+  const v=document.getElementById("petrolBufferKm").value;
+  if(v==="none"){ setStatus("Petrol pump buffer hidden"); return; }
+  let url="/api/petrol-pump-buffers/"; if(v==="1"||v==="2") url+=`?buffer_km=${v}`;
+  setStatus("Loading petrol pump buffer...");
+  createGeoJsonLayer(url, f=>String(f.properties.buffer_km)==="1"
+    ?{color:"#047857",weight:.7,fillColor:"#86efac",fillOpacity:.22}
+    :{color:"#92400e",weight:.7,fillColor:"#fde68a",fillOpacity:.20}, "#111827")
+    .then(layer=>{ petrolPumpBufferLayer=layer; layer.addTo(map); setStatus("Petrol pump buffer visible"); })
+    .catch(e=>{ console.error(e); setStatus("Petrol pump buffer failed"); });
+}
+
+// ── SERVICE MARKERS ──
+function createServiceIcon(color){
+  return L.divIcon({className:"",html:`<div style="width:18px;height:18px;background:${color};border:2.5px solid white;border-radius:50%;box-shadow:0 2px 10px rgba(0,0,0,.5)"></div>`,iconSize:[18,18],iconAnchor:[9,9],popupAnchor:[0,-9]});
+}
+const serviceRedIcon=createServiceIcon("#ef4444");
+const serviceGreenIcon=createServiceIcon("#10b981");
+
+function lockAllManualMarkers(){
+  Object.values(manualServiceMarkerMap).forEach(m=>{
+    if(m.dragging)m.dragging.disable();
+    m.setIcon(createServiceTypeIcon(m.options.serviceType || "other", false));
+  });
+}
+
+function enableMarkerEdit(id){
+  selectedEditServiceId=String(id); lockAllManualMarkers();
+  const m=manualServiceMarkerMap[String(id)];
+  if(m){ m.setIcon(createServiceTypeIcon(m.options.serviceType || "other", true)); if(m.dragging)m.dragging.enable(); if(!map.hasLayer(m))m.addTo(map); m.openPopup(); }
+}
+
+
+function resetServiceModeButtons(){
+  ["pickServiceMapBtn","useMapCenterBtn","lockServiceBtn"].forEach(id=>{
+    const btn=document.getElementById(id);
+    if(btn) btn.classList.remove("service-mode-on","active-route-mode","mode-on");
+  });
+  const pickBtn=document.getElementById("pickServiceMapBtn");
+  if(pickBtn) pickBtn.textContent="Pick From Map";
+}
+
+function flashServiceButton(id,label){
+  const btn=document.getElementById(id);
+  if(!btn) return;
+  const oldText=btn.textContent;
+  btn.classList.add("service-mode-on");
+  if(label) btn.textContent=label;
+  setTimeout(()=>{
+    btn.classList.remove("service-mode-on");
+    btn.textContent=oldText;
+  },900);
+}
+
+function lockServiceEdit(){
+  selectedEditServiceId=null;
+  lockAllManualMarkers();
+  document.body.classList.remove("route-clicking");
+  resetServiceModeButtons();
+  const lockBtn=document.getElementById("lockServiceBtn");
+  if(lockBtn){
+    lockBtn.classList.add("service-mode-on");
+    setTimeout(()=>lockBtn.classList.remove("service-mode-on"),700);
+  }
+  setServiceMessage("Markers locked. Edit mode OFF.");
+  setStatus("Service marker locked");
+}
+
+function clearServiceForm(){
+  document.getElementById("serviceId").value="";
+  document.getElementById("serviceName").value="";
+  document.getElementById("serviceType").value="hospital";
+  document.getElementById("serviceRegion").value="Chandigarh";
+  document.getElementById("serviceCountry").value="India";
+  document.getElementById("serviceLatitude").value="";
+  document.getElementById("serviceLongitude").value="";
+  document.getElementById("serviceMessage").innerText="";
+  lockServiceEdit();
+  setStatus("Service form cleared");
+}
+
+function pickServiceLocationFromMap(){
+  resetServiceModeButtons();
+
+  window.servicePickLocationMode = true;
+
+  const pickBtn=document.getElementById("pickServiceMapBtn");
+  if(pickBtn){
+    pickBtn.classList.add("service-mode-on","active-route-mode");
+    pickBtn.textContent="Picking Location...";
+  }
+
+  setServiceMessage("Pick mode ON: click on visible map area to fill latitude/longitude.");
+  setStatus("Click on map to pick service location");
+  document.body.classList.add("route-clicking");
+
+  // Remove old document handler if any
+  if(window.servicePickDocumentHandler){
+    document.removeEventListener("click", window.servicePickDocumentHandler, true);
+    window.servicePickDocumentHandler = null;
+  }
+
+  window.servicePickDocumentHandler = function(ev){
+    if(!window.servicePickLocationMode) return;
+
+    // Ignore clicks inside service form / sidebar panels
+    if(ev.target.closest("#panel-services") || ev.target.closest(".dropdown-panel") || ev.target.closest(".sidebar")){
+      return;
+    }
+
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    const latlng = map.mouseEventToLatLng(ev);
+
+    const ok = confirm(`Use this location?\nLat: ${latlng.lat.toFixed(6)}\nLng: ${latlng.lng.toFixed(6)}`);
+
+    window.servicePickLocationMode = false;
+    document.removeEventListener("click", window.servicePickDocumentHandler, true);
+    window.servicePickDocumentHandler = null;
+
+    document.body.classList.remove("route-clicking");
+    resetServiceModeButtons();
+
+    if(!ok){
+      setServiceMessage("Location pick cancelled. No coordinate changed.", true);
+      setStatus("Service location pick cancelled");
+      return;
+    }
+
+    document.getElementById("serviceLatitude").value = latlng.lat.toFixed(6);
+    document.getElementById("serviceLongitude").value = latlng.lng.toFixed(6);
+
+    setServiceMessage(`Location picked: ${latlng.lat.toFixed(6)}, ${latlng.lng.toFixed(6)}`);
+    setStatus("Service location picked from map");
+  };
+
+  // Delay so current button click is not treated as map click
+  setTimeout(()=>{
+    document.addEventListener("click", window.servicePickDocumentHandler, true);
+  },200);
+}
+
+function handleServiceLocationPick(e){
+  // kept for compatibility, main picker uses document click handler
+}
+
+function getServiceFormData(){
+  return { name:document.getElementById("serviceName").value.trim(), type:document.getElementById("serviceType").value,
+    region:document.getElementById("serviceRegion").value.trim(), country:document.getElementById("serviceCountry").value.trim(),
+    latitude:parseFloat(document.getElementById("serviceLatitude").value),
+    longitude:parseFloat(document.getElementById("serviceLongitude").value),
+    metadata:{source:"dashboard_manual"} };
+}
+
+function fillServiceForm(s){
+  document.getElementById("serviceId").value=s.id; document.getElementById("serviceName").value=s.name||"";
+  document.getElementById("serviceType").value=s.type||"other"; document.getElementById("serviceRegion").value=s.region||"";
+  document.getElementById("serviceCountry").value=s.country||"";
+  document.getElementById("serviceLatitude").value=Number(s.latitude).toFixed(6);
+  document.getElementById("serviceLongitude").value=Number(s.longitude).toFixed(6);
+}
+
+function removeManualServiceMarkers(){ manualServiceMarkers.forEach(m=>map.removeLayer(m)); manualServiceMarkers=[]; manualServiceMarkerMap={}; }
+
+function fitManualServiceMarkers(){
+  if(!manualServiceMarkers || !manualServiceMarkers.length) return;
+
+  document.getElementById("toggleManualServices").checked = true;
+  syncManualMarkersVisibility();
+
+  const group = L.featureGroup(manualServiceMarkers);
+  const bounds = group.getBounds();
+
+  if(bounds.isValid()){
+    // If manual services are outside the locked Chandigarh boundary,
+    // allow the map to move to their location.
+    if(map.options.maxBounds && !map.options.maxBounds.contains(bounds)){
+      map.setMaxBounds(null);
+      map.options.maxBoundsViscosity = 0.0;
+    }
+
+    map.fitBounds(bounds, {padding:[60,60], maxZoom:16});
+    setStatus(`${manualServiceMarkers.length} manual marker(s) shown on map`);
+  }
+}
+
+function serviceMarkerPopup(s){
+  const edit=String(selectedEditServiceId)===String(s.id)
+    ?"<br><b style='color:#10b981'>Edit mode ON · Marker is draggable</b>"
+    :"<br><small>Click Edit in table to move this marker</small>";
+  return `<b>${escapeHtml(s.name)}</b><br><b>Type:</b> ${escapeHtml(s.type)}<br><b>Region:</b> ${escapeHtml(s.region||"")}<br><b>Country:</b> ${escapeHtml(s.country||"")}<br><b>Lat:</b> ${Number(s.latitude).toFixed(6)}<br><b>Lng:</b> ${Number(s.longitude).toFixed(6)}${edit}`;
+}
+
+function syncManualMarkersVisibility(){
+  const checkbox=document.getElementById("toggleManualServices");
+  const show=checkbox && checkbox.checked;
+
+  // If user turns ON Manual Services before markers are available,
+  // reload services from API and then fit the map to those markers.
+  if(show && !manualServiceMarkers.length){
+    loadServices(true);
+    return;
+  }
+
+  manualServiceMarkers.forEach(m=>{
+    if(show){
+      if(!map.hasLayer(m)) m.addTo(map);
+    }else{
+      if(map.hasLayer(m)) map.removeLayer(m);
+    }
+  });
+
+  if(show){
+    setStatus(`${manualServiceMarkers.length} manual service marker(s) visible`);
+  }else{
+    setStatus("Manual Services hidden");
+  }
+}
+
+function addManualServiceMarkers(services){
+  removeManualServiceMarkers();
+  services.forEach(s=>{
+    const lat = Number(s.latitude);
+    const lng = Number(s.longitude);
+    if(!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+    const m=L.marker([lat,lng],{
+      draggable:false,
+      icon:createServiceTypeIcon(s.type || "other", false),
+      pane:"manualServicesPane",
+      zIndexOffset:5000
+    });
+    m.options.serviceType = s.type || "other";
+    m.bindPopup(serviceMarkerPopup(s));
+    m.on("dragend",()=>{
+      if(String(selectedEditServiceId)!==String(s.id)){
+        setServiceMessage("Click Edit first to move this marker",true);
+        return;
+      }
+
+      const p=m.getLatLng();
+
+      // Update UI/form only. Do not save directly.
+      s.latitude=p.lat;
+      s.longitude=p.lng;
+
+      document.getElementById("serviceLatitude").value=p.lat.toFixed(6);
+      document.getElementById("serviceLongitude").value=p.lng.toFixed(6);
+
+      updateEditModalCoords(s.id, p.lat, p.lng);
+
+      m.setPopupContent(serviceMarkerPopup(s));
+      setServiceMessage(`Marker moved: ${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}. Click Apply Changes to save.`);
+      setStatus("Marker moved. Not saved yet.");
+    });
+    manualServiceMarkers.push(m); manualServiceMarkerMap[String(s.id)]=m;
+    if(String(selectedEditServiceId)===String(s.id)){m.setIcon(createServiceTypeIcon(s.type || "other", true));m.dragging.enable();m.setPopupContent(serviceMarkerPopup(s));}
+  });
+  syncManualMarkersVisibility();
+}
+
+// ── SERVICE FILTERS & LOAD ──
+function getServiceFilterUrl(){
+  // Filters panel removed. Always load all manual services.
+  return "/api/services/";
+}
+
+
+function clearServiceFilters(){
+  // Filters panel removed. Just reload all services.
+  loadServices();
+}
+
+
+
+// ── ROUTE DROPDOWNS ──
+function serviceTypeLabel(type){
+  const labels={
+    hospital:"Hospital", hospital_govt:"Govt Hospital", hospital_private:"Private Hospital",
+    clinic:"Clinic", pharmacy:"Pharmacy", school:"School", college:"College",
+    university:"University", petrol_pump:"Petrol Pump", charging_station:"EV Charging Station",
+    village:"Village", sector:"Sector", temple:"Temple", gurudwara:"Gurudwara",
+    mosque:"Mosque", church:"Church", police_station:"Police Station",
+    fire_station:"Fire Station", bus_stop:"Bus Stop", bus_stand:"Bus Stand", railway_station:"Railway Station",
+    airport:"Airport", parking:"Parking", bank:"Bank", atm:"ATM",
+    government_office:"Government Office", market:"Market", park:"Park",
+    water_body:"Water Body", other:"Other"
+  };
+  const key=(type||"other").toString().trim();
+  if(labels[key]) return labels[key];
+  return key.replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase());
+}
+
+
+const ROUTE_GIS_SERVICE_ENDPOINTS = [
+  {key:"govt_hospitals", label:"Govt Hospital", type:"hospital_govt", url:"/api/govt-hospitals/"},
+  {key:"private_hospitals", label:"Private Hospital", type:"hospital_private", url:"/api/private-hospitals/"},
+  {key:"schools", label:"School", type:"school", url:"/api/schools/"},
+  {key:"colleges", label:"College", type:"college", url:"/api/colleges/"},
+  {key:"petrol_pumps", label:"Petrol Pump", type:"petrol_pump", url:"/api/petrol-pumps/"},
+  {key:"police_stations", label:"Police Station", type:"police_station", url:"/api/police-stations/"},
+  {key:"railway_stations", label:"Railway Station", type:"railway_station", url:"/api/railway-stations/"},
+  {key:"bus_stands", label:"Bus Stand", type:"bus_stand", url:"/api/bus-stands/"},
+];
+
+function flattenCoordinates(coords, out=[]){
+  if(!Array.isArray(coords)) return out;
+  if(typeof coords[0]==="number" && typeof coords[1]==="number"){
+    out.push(coords);
+    return out;
+  }
+  coords.forEach(c=>flattenCoordinates(c,out));
+  return out;
+}
+
+function featureLatLng(feature){
+  const g=feature && feature.geometry;
+  if(!g || !g.coordinates) return null;
+  const pts=flattenCoordinates(g.coordinates,[])
+    .filter(pt=>Array.isArray(pt) && Number.isFinite(Number(pt[0])) && Number.isFinite(Number(pt[1])));
+  if(!pts.length) return null;
+
+  // For points this is exact; for polygon/line API layers this works as center fallback.
+  const sum=pts.reduce((a,pt)=>{a.lng+=Number(pt[0]); a.lat+=Number(pt[1]); return a;},{lat:0,lng:0});
+  return {lat:sum.lat/pts.length, lng:sum.lng/pts.length};
+}
+
+function propertyValue(props, keys){
+  props=props || {};
+  for(const k of keys){
+    if(props[k]!==null && props[k]!==undefined && String(props[k]).trim()!=="") return props[k];
+  }
+  return "";
+}
+
+function featureToRouteService(feature, source, index){
+  const latlng=featureLatLng(feature);
+  if(!latlng) return null;
+  const p=feature.properties || {};
+  const name=propertyValue(p,["hospital_name","school_name","college_name","petrol_pump_name","village_name","sector_name","sector_nam","name","Name"])
+    || `${source.label} ${index+1}`;
+  const dbId=propertyValue(p,["id","ogc_fid","fid","hospital_id","school_id","college_id","village_id","sector_id"]);
+  return {
+    id:`api::${source.key}::${dbId || index}`,
+    name:String(name),
+    type:source.type,
+    region:propertyValue(p,["region","district","city","state"]) || "API Layer",
+    country:propertyValue(p,["country"]) || "India",
+    latitude:latlng.lat,
+    longitude:latlng.lng,
+    metadata:{source:"api_layer", layer:source.key},
+    source_label:source.label
+  };
+}
+
+function fetchGisRouteServices(){
+  return Promise.allSettled(ROUTE_GIS_SERVICE_ENDPOINTS.map(src=>
+    fetch(src.url)
+      .then(r=>r.ok ? r.json() : Promise.reject(new Error(`${src.url} failed`)))
+      .then(data=>{
+        const features=(data && data.features) ? data.features : [];
+        return features.map((f,i)=>featureToRouteService(f,src,i)).filter(Boolean);
+      })
+  )).then(results=>results.flatMap(r=>r.status==="fulfilled" ? r.value : []));
+}
+
+function isDatabaseServiceId(value){
+  return value!==null && value!==undefined && String(value).trim()!=="" && !String(value).startsWith("api::") && /^\d+$/.test(String(value));
+}
+
+function hasValidServiceCoords(s){
+  const lat=parseFloat(s.latitude);
+  const lng=parseFloat(s.longitude);
+  return Number.isFinite(lat) && Number.isFinite(lng);
+}
+
+function routeServiceOptionText(s){
+  // Route Planner dropdown me sirf clean service name show hoga.
+  // API / ID / Layer / Region extra text hide rahega.
+  const name = String(s.name || "Unnamed Service").trim();
+
+  if(!name || name.toLowerCase().includes("grid")){
+    return "";
+  }
+
+  return name;
+}
+
+function updateRouteServiceDropdowns(services){
+  const origin=document.getElementById("routeOriginService");
+  const destination=document.getElementById("routeDestinationService");
+  const multi=document.getElementById("multiStopServiceSelect");
+  if(!origin||!destination) return;
+
+  const routeServices=(Array.isArray(services)?services:[])
+    .filter(s=>s && s.id!==undefined && hasValidServiceCoords(s))
+    .sort((a,b)=>{
+      const ta=serviceTypeLabel(a.type).localeCompare(serviceTypeLabel(b.type));
+      if(ta!==0) return ta;
+      return (a.name||"").localeCompare(b.name||"");
+    });
+
+  const oldOrigin=origin.value, oldDestination=destination.value, oldMulti=multi?multi.value:"";
+
+  function resetSelect(select,ph){
+    if(!select) return;
+    select.innerHTML="";
+    const f=document.createElement("option");
+    f.value="";
+    f.textContent=ph;
+    select.appendChild(f);
+  }
+
+  function addServices(select){
+    if(!select) return;
+    const byType={};
+    routeServices.forEach(s=>{
+      const key=(s.type||"other").toString().trim() || "other";
+      if(!byType[key]) byType[key]=[];
+      byType[key].push(s);
+    });
+
+    Object.keys(byType)
+      .sort((a,b)=>serviceTypeLabel(a).localeCompare(serviceTypeLabel(b)))
+      .forEach(type=>{
+        const items=byType[type];
+        const grp=document.createElement("optgroup");
+        grp.label=`${serviceTypeLabel(type)} (${items.length})`;
+        items.forEach(s=>{
+          const optionText = routeServiceOptionText(s);
+          if(!optionText) return;
+
+          const opt=document.createElement("option");
+          opt.value=s.id;
+          opt.textContent=optionText;
+          opt.dataset.lat=s.latitude;
+          opt.dataset.lng=s.longitude;
+          opt.dataset.type=s.type || "other";
+          grp.appendChild(opt);
+        });
+        select.appendChild(grp);
+      });
+  }
+
+  resetSelect(origin, routeServices.length ? "Select origin service" : "No services with coordinates found");
+  resetSelect(destination, routeServices.length ? "Select destination service" : "No services with coordinates found");
+  addServices(origin);
+  addServices(destination);
+
+  if(multi){
+    resetSelect(multi, routeServices.length ? "Select service to add as stop" : "No services with coordinates found");
+    addServices(multi);
+  }
+
+  if([...origin.options].some(o=>o.value===oldOrigin)) origin.value=oldOrigin;
+  if([...destination.options].some(o=>o.value===oldDestination)) destination.value=oldDestination;
+  if(multi&&[...multi.options].some(o=>o.value===oldMulti)) multi.value=oldMulti;
+
+  if(routeServices.length){
+    setRouteMessage(`${routeServices.length} services loaded in Route Planner`);
+  }
+}
+
+function refreshRouteServices(){
+  // Route Planner dropdown may include DB/manual + GIS layer services for routing only.
+  // This does NOT add those GIS/API services to the Manual Services map layer.
+  const manualAndDbServices = fetch("/api/services/")
+    .then(r=>r.ok ? r.json() : [])
+    .catch(()=>[]);
+
+  Promise.all([manualAndDbServices, fetchGisRouteServices()])
+    .then(([dbServices, gisServices])=>{
+      const allServices=[];
+      const seen=new Set();
+
+      (Array.isArray(dbServices)?dbServices:[]).forEach(s=>{
+        if(!s || s.id===undefined) return;
+        const key=`db::${s.id}`;
+        if(seen.has(key)) return;
+        seen.add(key);
+        allServices.push(s);
+      });
+
+      (Array.isArray(gisServices)?gisServices:[]).forEach(s=>{
+        if(!s || !s.id) return;
+        if(seen.has(String(s.id))) return;
+        seen.add(String(s.id));
+        allServices.push(s);
+      });
+
+      currentServices=allServices;
+      updateRouteServiceDropdowns(currentServices);
+    })
+    .catch(e=>{
+      console.error(e);
+      setRouteMessage("Route services failed to load", true);
+    });
+}
+
+// ── ROUTE ENDPOINT MARKERS ──
+let routeEndpointMarkers=[];
+function clearRouteEndpointMarkers(){ routeEndpointMarkers.forEach(m=>{if(map.hasLayer(m))map.removeLayer(m);}); routeEndpointMarkers=[]; }
+function findCurrentServiceById(id){ return currentServices.find(s=>String(s.id)===String(id)); }
+
+function createRoutePointIcon(label,color){
+  const labelText = String(label || "").toUpperCase();
+
+  let title = "STOP";
+  if(labelText === "S" || labelText === "O") title = "START";
+  if(labelText === "E" || labelText === "D") title = "END";
+  if(/^\d+$/.test(labelText)) title = "STOP " + labelText;
+
+  const textColor = color === "#f59e0b" ? "#111827" : "#ffffff";
+
+  return L.divIcon({
+    className:"",
+    html:`<div style="
+      position:relative;
+      width:46px;
+      height:58px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:flex-start;
+      font-family:Arial,sans-serif;
+      filter:drop-shadow(0 8px 18px rgba(0,0,0,.45));
+    ">
+      <div style="
+        width:42px;
+        height:42px;
+        border-radius:50% 50% 50% 8px;
+        transform:rotate(-45deg);
+        background:linear-gradient(135deg, ${color}, rgba(15,23,42,.92));
+        border:3px solid rgba(255,255,255,.96);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        box-shadow:0 0 0 5px rgba(255,255,255,.12), 0 8px 20px rgba(0,0,0,.35);
+      ">
+        <span style="
+          transform:rotate(45deg);
+          color:${textColor};
+          font-weight:900;
+          font-size:14px;
+          letter-spacing:.3px;
+          line-height:1;
+        ">${labelText}</span>
+      </div>
+      <div style="
+        margin-top:4px;
+        padding:3px 7px;
+        border-radius:999px;
+        background:rgba(15,23,42,.92);
+        color:#f8fafc;
+        border:1px solid rgba(255,255,255,.22);
+        font-size:9px;
+        font-weight:900;
+        letter-spacing:.7px;
+        white-space:nowrap;
+        backdrop-filter:blur(6px);
+      ">${title}</div>
+    </div>`,
+    iconSize:[46,58],
+    iconAnchor:[23,48],
+    popupAnchor:[0,-48]
+  });
+}
+
+function addRouteEndpointMarker(service,label,color,title){
+  if(!service||service.latitude===null||service.longitude===null) return;
+  const lat=parseFloat(service.latitude), lng=parseFloat(service.longitude);
+  const marker=L.marker([lat,lng],{icon:createRoutePointIcon(label,color)}).addTo(map);
+  marker.bindPopup(`<b>${title}</b><br>${escapeHtml(service.name||"Unnamed")}<br><b>Type:</b> ${escapeHtml(service.type||"")}<br><b>Lat:</b> ${lat.toFixed(6)}<br><b>Lng:</b> ${lng.toFixed(6)}`);
+  routeEndpointMarkers.push(marker);
+}
+
+function addRouteEndpointMarkersForResult(result){
+  clearRouteEndpointMarkers();
+  if(result.route_type==="multi_stop"&&Array.isArray(result.service_ids)){
+    result.service_ids.forEach((id,i)=>{ addRouteEndpointMarker(findCurrentServiceById(id),String(i+1),"#3b82f6",`Stop ${i+1}`); });
+    return;
+  }
+  if(result.origin_service_id&&result.destination_service_id){
+    addRouteEndpointMarker(findCurrentServiceById(result.origin_service_id),"S","#10b981","Source");
+    addRouteEndpointMarker(findCurrentServiceById(result.destination_service_id),"E","#ef4444","Destination");
+  }
+}
+
+// ── ROUTE CORE ──
+function setRouteMessage(m,isError=false){
+  const el=document.getElementById("routeMessage"); if(!el) return;
+  el.innerText=m; el.style.color=isError?"#ef4444":"#10b981"; if(m) setStatus(m);
+}
+
+function clearRoute(){
+  if(routeLayer&&map.hasLayer(routeLayer)) map.removeLayer(routeLayer);
+  routeLayer=null; clearRouteEndpointMarkers();
+  const routeSummaryEl=document.getElementById("routeSummary"); if(routeSummaryEl) routeSummaryEl.style.display="none";
+  const routeWidthSummaryEl=document.getElementById("routeWidthSummary"); if(routeWidthSummaryEl) routeWidthSummaryEl.style.display="none";
+  ["routeDistance","routeTime","routeEdges","routeSnap"].forEach(id=>{const el=document.getElementById(id); if(el) el.innerText="-";});
+  ["width5Km","width5Edges","width4Km","width4Edges","widthBelow4Km","widthBelow4Edges"].forEach(id=>{const el=document.getElementById(id); if(el) el.innerText="-";});
+  hideRouteWidthDetailTable();
+  setRouteMessage("Route cleared");
+}
+
+
+function ensureRouteWidthDetailPanel(){
+  let panel=document.getElementById("routeWidthDetailPanel");
+  if(panel) return panel;
+
+  panel=document.createElement("div");
+  panel.id="routeWidthDetailPanel";
+  panel.className="route-width-detail-panel";
+  panel.innerHTML=`
+    <div class="route-width-detail-head">
+      <div>
+        <div class="route-width-detail-title">Route Width Detail Table</div>
+        <div class="route-width-detail-sub" id="routeWidthDetailSub">Color-wise road segment details</div>
+      </div>
+      <button class="route-width-detail-close" id="routeWidthDetailCloseBtn">Close</button>
+    </div>
+    <div class="route-width-detail-scroll">
+      <table class="route-width-detail-table">
+        <thead>
+          <tr>
+            <th>Color</th>
+            <th>Road</th>
+            <th>Type</th>
+            <th>Width</th>
+            <th>Condition</th>
+            <th>Length</th>
+          </tr>
+        </thead>
+        <tbody id="routeWidthDetailBody"></tbody>
+      </table>
+    </div>
+  `;
+  document.body.appendChild(panel);
+
+  document.getElementById("routeWidthDetailCloseBtn").addEventListener("click",()=>{
+    panel.style.display="none";
+  });
+
+  return panel;
+}
+
+function renderRouteWidthDetailTable(result){
+  const panel=ensureRouteWidthDetailPanel();
+  const body=document.getElementById("routeWidthDetailBody");
+  const sub=document.getElementById("routeWidthDetailSub");
+
+  const features = result.width_segments_geojson && result.width_segments_geojson.features
+    ? result.width_segments_geojson.features
+    : [];
+
+  if(!features.length){
+    body.innerHTML=`<tr><td colspan="6">No route segment details available</td></tr>`;
+    panel.style.display="block";
+    return;
+  }
+
+  const preferred = result.preferred_width_m ? `${result.preferred_width_m}m+ preference` : "Width preference";
+  sub.innerText = `${preferred} | Green preferred, Orange near, Red narrow`;
+
+  body.innerHTML = features.map(f=>{
+    const p=f.properties || {};
+    const color=p.color || "#2563eb";
+    return `
+      <tr>
+        <td><span class="route-color-box" style="background:${color}"></span></td>
+        <td>${escapeHtml(p.road_name || "Unnamed Road")}</td>
+        <td>${escapeHtml(p.road_type || "-")}</td>
+        <td>${p.width_m ?? "-"} m</td>
+        <td>${escapeHtml(p.condition || "-")}</td>
+        <td>${p.length_m ?? "-"} m</td>
+      </tr>
+    `;
+  }).join("");
+
+  panel.style.display="block";
+}
+
+function hideRouteWidthDetailTable(){
+  const panel=document.getElementById("routeWidthDetailPanel");
+  if(panel) panel.style.display="none";
+}
+
+
+
+function routeSegmentPopup(p){
+  const lengthM = Number(p.length_m || 0);
+  const lengthKm = lengthM ? (lengthM / 1000).toFixed(3) : "-";
+
+  return `
+    <div style="min-width:220px;font-family:Arial,sans-serif">
+      <div style="font-size:15px;font-weight:900;color:#0f172a;margin-bottom:6px">
+        Route Segment Information
+      </div>
+      <div style="font-size:12px;line-height:1.45">
+        <b>Road:</b> ${escapeHtml(p.road_name || "Unnamed Road")}<br>
+        <b>Type:</b> ${escapeHtml(p.road_type || "-")}<br>
+        <b>Segment Length:</b> ${lengthKm} km
+      </div>
+    </div>`;
+}
+
+
+function drawRoute(result){
+  clearRouteEndpointMarkers();
+
+  if(typeof hideRouteWidthDetailTable === "function"){
+    hideRouteWidthDetailTable();
+  }
+
+  const routeWidthSummaryEl=document.getElementById("routeWidthSummary");
+  if(routeWidthSummaryEl) routeWidthSummaryEl.style.display="none";
+
+  if(routeLayer&&map.hasLayer(routeLayer)) map.removeLayer(routeLayer);
+
+  // Use segment GeoJSON when available because it has road name/type/length.
+  const routeGeoJson = result.width_segments_geojson || result.geojson;
+
+  routeLayer=L.geoJSON(routeGeoJson,{
+    bubblingMouseEvents:false,
+    style:()=>({color:"#2563eb",weight:6,opacity:.96}),
+    onEachFeature:(feature,layer)=>{
+      const p = feature && feature.properties ? feature.properties : {};
+      layer.bindPopup(routeSegmentPopup(p), {maxWidth:300});
+      layer.on("click", function(e){
+        this.openPopup(e.latlng);
+        if(e.originalEvent) L.DomEvent.stopPropagation(e.originalEvent);
+      });
+    }
+  }).addTo(map);
+
+  routeLayer.bringToFront();
+  addRouteEndpointMarkersForResult(result);
+  map.fitBounds(routeLayer.getBounds(),{padding:[40,40]});
+
+  const rd=document.getElementById("routeDistance"); if(rd) rd.innerText=`${result.distance_km} km`;
+  const rt=document.getElementById("routeTime"); if(rt) rt.innerText=`${result.time_min} min`;
+  const re=document.getElementById("routeEdges"); if(re) re.innerText=result.edge_count;
+  const rs=document.getElementById("routeSnap"); if(rs) rs.innerText=`${result.origin_snap_m}m / ${result.destination_snap_m}m`;
+  const rsum=document.getElementById("routeSummary"); if(rsum) rsum.style.display="grid";
+
+  setRouteMessage("Route loaded successfully");
+}
+
+function findRoute(){
+  const origin=document.getElementById("routeOriginService").value,
+        destination=document.getElementById("routeDestinationService").value,
+        costBy=document.getElementById("routeCostBy").value;
+
+  if(!origin||!destination){ setRouteMessage("Please select origin and destination services",true); return; }
+  if(origin===destination){ setRouteMessage("Origin and destination cannot be same",true); return; }
+
+  const originService=findCurrentServiceById(origin);
+  const destinationService=findCurrentServiceById(destination);
+  if(!originService || !destinationService || !hasValidServiceCoords(originService) || !hasValidServiceCoords(destinationService)){
+    setRouteMessage("Selected service coordinates not found", true);
+    refreshRouteServices();
+    return;
+  }
+
+  setRouteMessage("Finding service route...");
+
+  // If both are saved Django Service rows, use Service-ID route API.
+  // If one/both are GIS API layer features, use coordinate route API.
+  if(isDatabaseServiceId(origin) && isDatabaseServiceId(destination)){
+    fetch("/api/routes/",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        origin_service_id:parseInt(origin),
+        destination_service_id:parseInt(destination),
+        cost_by:costBy
+      })})
+      .then(r=>r.json())
+      .then(result=>{
+        if(!result.success){setRouteMessage(result.message||"No route found",true);return;}
+        drawRoute(result);
+      })
+      .catch(e=>{ console.error(e); setRouteMessage("Route API failed",true); });
+    return;
+  }
+
+  fetch("/api/routes/coords/",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      origin_lat:parseFloat(originService.latitude),
+      origin_lng:parseFloat(originService.longitude),
+      destination_lat:parseFloat(destinationService.latitude),
+      destination_lng:parseFloat(destinationService.longitude),
+      cost_by:costBy
+    })})
+    .then(r=>r.json())
+    .then(result=>{
+      if(!result.success){setRouteMessage(result.message||"No route found",true);return;}
+      result.origin_service_id=origin;
+      result.destination_service_id=destination;
+      result.route_type="service_coords";
+      drawRoute(result);
+    })
+    .catch(e=>{ console.error(e); setRouteMessage("Coordinate route API failed",true); });
+}
+
+// ── ROUTE CLICK MODE ──
+function clearRouteButtonActiveState(){
+  document.body.classList.remove("route-clicking");
+  const originBtn=document.getElementById("setOriginClickBtn"); if(originBtn) originBtn.classList.remove("active-route-mode");
+  const destBtn=document.getElementById("setDestinationClickBtn"); if(destBtn) destBtn.classList.remove("active-route-mode");
+}
+
+function setRouteClickMode(mode){
+  if(pendingRouteClickHandler){map.off("click",pendingRouteClickHandler);pendingRouteClickHandler=null;}
+  routeClickMode=mode; clearRouteButtonActiveState(); document.body.classList.add("route-clicking");
+  if(mode==="origin"){ document.getElementById("setOriginClickBtn").classList.add("active-route-mode"); setRouteMessage("Origin mode ON: click on the map"); }
+  else if(mode==="destination"){ document.getElementById("setDestinationClickBtn").classList.add("active-route-mode"); setRouteMessage("Destination mode ON: click on the map"); }
+  pendingRouteClickHandler=function(e){
+    if(mode==="origin") setCoordOrigin(e.latlng); else if(mode==="destination") setCoordDestination(e.latlng);
+    routeClickMode=null; clearRouteButtonActiveState(); pendingRouteClickHandler=null;
+  };
+  map.once("click",pendingRouteClickHandler);
+}
+
+// ── ROAD BLOCKING ──
+function clearRoadBlockButtonActiveState(){
+  const roadInfoBtn=document.getElementById("roadInfoModeBtn"); if(roadInfoBtn) roadInfoBtn.classList.remove("active-route-mode");
+  const blockBtn=document.getElementById("roadBlockModeBtn"); if(blockBtn) blockBtn.classList.remove("active-route-mode");
+  const unblockBtn=document.getElementById("roadUnblockModeBtn"); if(unblockBtn) unblockBtn.classList.remove("active-route-mode");
+  document.body.classList.remove("route-clicking");
+}
+
+function drawRoadBlockPreview(geojson,isPassable){
+  if(roadBlockPreviewLayer&&map.hasLayer(roadBlockPreviewLayer)) map.removeLayer(roadBlockPreviewLayer);
+  roadBlockPreviewLayer=L.geoJSON(geojson,{style:()=>({color:isPassable?"#10b981":"#ef4444",weight:7,opacity:.95})}).addTo(map);
+  roadBlockPreviewLayer.bringToFront();
+  roadBlockPreviewLayer.bindPopup(isPassable?"Road marked passable":"Road marked blocked").openPopup();
+}
+
+function drawRoadInfoPreview(result){
+  if(roadInfoPreviewLayer && map.hasLayer(roadInfoPreviewLayer)){
+    map.removeLayer(roadInfoPreviewLayer);
+  }
+
+  roadInfoPreviewLayer = L.geoJSON(result.geojson, {
+    style:()=>({color:"#2563eb",weight:7,opacity:.95})
+  }).addTo(map);
+
+  roadInfoPreviewLayer.bringToFront();
+
+  const passableText = result.passable ? "Yes" : "No";
+  const popupHtml = `
+    <div style="min-width:230px;font-family:Arial,sans-serif">
+      <div style="font-size:15px;font-weight:900;color:#0f172a;margin-bottom:7px">Road Information</div>
+      <div><b>Road:</b> ${escapeHtml(result.road_name || "Unnamed Road")}</div>
+      <div><b>Type:</b> ${escapeHtml(result.road_type || "Unknown")}</div>
+      <div><b>Condition:</b> ${escapeHtml(result.road_condition || "Unknown")}</div>
+      <div><b>Width:</b> ${result.road_width_m ?? "-"} m</div>
+      <div><b>Speed:</b> ${result.speed_kmh ?? "-"} km/h</div>
+      <div><b>Length:</b> ${result.length_m ?? "-"} m</div>
+      <div><b>Passable:</b> ${passableText}</div>
+      <div><b>Click Distance:</b> ${result.distance_from_click_m ?? "-"} m</div>
+    </div>
+  `;
+
+  roadInfoPreviewLayer.bindPopup(popupHtml, {maxWidth:320}).openPopup();
+}
+
+function showRoadInfoAt(latlng){
+  setRouteMessage("Finding nearest road info...");
+
+  fetch(`/api/road-info/?lat=${latlng.lat}&lng=${latlng.lng}`)
+    .then(r=>r.json())
+    .then(result=>{
+      if(!result.success){
+        setRouteMessage(result.message || "No road found near clicked point", true);
+        return;
+      }
+
+      drawRoadInfoPreview(result);
+      setRouteMessage(`${result.road_name || "Unnamed Road"} | ${result.road_condition} | ${result.road_width_m} m`);
+    })
+    .catch(e=>{
+      console.error(e);
+      setRouteMessage("Road info API failed", true);
+    });
+}
+
+function setRoadInfoMode(){
+  if(pendingRouteClickHandler){map.off("click",pendingRouteClickHandler);pendingRouteClickHandler=null;}
+  if(roadBlockClickHandler){map.off("click",roadBlockClickHandler);roadBlockClickHandler=null;}
+  if(roadInfoClickHandler){map.off("click",roadInfoClickHandler);roadInfoClickHandler=null;}
+  if(roadInfoClickHandler){map.off("click",roadInfoClickHandler);roadInfoClickHandler=null;}
+
+  clearRouteButtonActiveState();
+  clearRoadBlockButtonActiveState();
+
+  document.body.classList.add("route-clicking");
+  document.getElementById("roadInfoModeBtn").classList.add("active-route-mode");
+  setRouteMessage("Road Info Mode ON: click near any road");
+
+  roadInfoClickHandler = function(e){
+    showRoadInfoAt(e.latlng);
+    clearRoadBlockButtonActiveState();
+    roadInfoClickHandler = null;
+  };
+
+  map.once("click", roadInfoClickHandler);
+}
+
+function toggleRoadPassableAt(latlng,passableValue){
+  setRouteMessage(passableValue?"Unblocking nearest road...":"Blocking nearest road...");
+  fetch("/api/roads/toggle-passable/",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({lat:latlng.lat,lng:latlng.lng,passable:passableValue,max_distance_m:50})})
+    .then(r=>r.json()).then(result=>{
+      if(!result.success){setRouteMessage(result.message||"Road update failed",true);return;}
+      if(result.geojson) drawRoadBlockPreview(result.geojson,result.new_passable);
+      setRouteMessage(`${result.message} | edge ${result.edge_id} | ${result.distance_m.toFixed(1)} m from click`);
+    }).catch(e=>{ console.error(e); setRouteMessage("Road block/unblock API failed",true); });
+}
+
+function setRoadBlockMode(passableValue){
+  if(pendingRouteClickHandler){map.off("click",pendingRouteClickHandler);pendingRouteClickHandler=null;}
+  if(roadBlockClickHandler){map.off("click",roadBlockClickHandler);roadBlockClickHandler=null;}
+  clearRouteButtonActiveState(); clearRoadBlockButtonActiveState(); document.body.classList.add("route-clicking");
+  if(passableValue===false){ document.getElementById("roadBlockModeBtn").classList.add("active-route-mode"); setRouteMessage("Block Road Mode ON: click nearest road"); }
+  else { document.getElementById("roadUnblockModeBtn").classList.add("active-route-mode"); setRouteMessage("Unblock Road Mode ON: click nearest road"); }
+  roadBlockClickHandler=function(e){ toggleRoadPassableAt(e.latlng,passableValue); clearRoadBlockButtonActiveState(); roadBlockClickHandler=null; };
+  map.once("click",roadBlockClickHandler);
+}
+
+// ── COORD ORIGIN / DEST ──
+function setCoordOrigin(latlng){
+  coordOrigin={lat:latlng.lat,lng:latlng.lng};
+  document.getElementById("coordOriginLat").value=latlng.lat.toFixed(6);
+  document.getElementById("coordOriginLng").value=latlng.lng.toFixed(6);
+  if(coordOriginMarker&&map.hasLayer(coordOriginMarker)) map.removeLayer(coordOriginMarker);
+  coordOriginMarker=L.marker(latlng,{icon:createRoutePointIcon("O","#10b981"),draggable:true}).addTo(map)
+    .bindPopup("<b>Origin Selected</b><br>Drag to adjust").bindTooltip("Origin",{permanent:true,direction:"top",offset:[0,-34]}).openPopup();
+  coordOriginMarker.on("dragend",()=>setCoordOrigin(coordOriginMarker.getLatLng()));
+  setRouteMessage("Origin point selected");
+}
+
+function setCoordDestination(latlng){
+  coordDestination={lat:latlng.lat,lng:latlng.lng};
+  document.getElementById("coordDestinationLat").value=latlng.lat.toFixed(6);
+  document.getElementById("coordDestinationLng").value=latlng.lng.toFixed(6);
+  if(coordDestinationMarker&&map.hasLayer(coordDestinationMarker)) map.removeLayer(coordDestinationMarker);
+  coordDestinationMarker=L.marker(latlng,{icon:createRoutePointIcon("D","#ef4444"),draggable:true}).addTo(map)
+    .bindPopup("<b>Destination Selected</b><br>Drag to adjust").bindTooltip("Destination",{permanent:true,direction:"top",offset:[0,-34]}).openPopup();
+  coordDestinationMarker.on("dragend",()=>setCoordDestination(coordDestinationMarker.getLatLng()));
+  setRouteMessage("Destination point selected");
+}
+
+function clearCoordPoints(){
+  routeClickMode=null; clearRouteButtonActiveState();
+  if(pendingRouteClickHandler){map.off("click",pendingRouteClickHandler);pendingRouteClickHandler=null;}
+  coordOrigin=null; coordDestination=null;
+  if(coordOriginMarker&&map.hasLayer(coordOriginMarker)) map.removeLayer(coordOriginMarker);
+  if(coordDestinationMarker&&map.hasLayer(coordDestinationMarker)) map.removeLayer(coordDestinationMarker);
+  coordOriginMarker=null; coordDestinationMarker=null;
+  ["coordOriginLat","coordOriginLng","coordDestinationLat","coordDestinationLng"].forEach(id=>document.getElementById(id).value="");
+  setRouteMessage("Click points cleared");
+}
+
+function findCoordRoute(){
+  const costBy=document.getElementById("routeCostBy").value;
+  if(!coordOrigin||!coordDestination){ setRouteMessage("Please select origin and destination by map click",true); return; }
+  setRouteMessage("Finding click route...");
+  fetch("/api/routes/coords/",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({origin_lat:coordOrigin.lat,origin_lng:coordOrigin.lng,destination_lat:coordDestination.lat,destination_lng:coordDestination.lng,cost_by:costBy})})
+    .then(r=>r.json()).then(result=>{ if(!result.success){setRouteMessage(result.message||"No route found",true);return;} drawRoute(result); })
+    .catch(e=>{ console.error(e); setRouteMessage("Coordinate route API failed",true); });
+}
+
+// ── MULTI-STOP ──
+let multiStopIds=[], multiStopLabels=[];
+
+function renderMultiStopList(){
+  const el=document.getElementById("multiStopList"); if(!el) return;
+  el.innerHTML=multiStopIds.length ? multiStopLabels.map((l,i)=>`${i+1}. ${escapeHtml(l)}`).join("<br>") : "No stops selected";
+}
+
+function addMultiStop(){
+  const select=document.getElementById("multiStopServiceSelect");
+  if(!select||!select.value){ setRouteMessage("Please select a service to add as stop",true); return; }
+  const id=select.value, label=select.options[select.selectedIndex].textContent;
+  if(multiStopIds.includes(id)){ setRouteMessage("This service is already added",true); return; }
+  multiStopIds.push(id); multiStopLabels.push(label); renderMultiStopList(); setRouteMessage(`Stop added: ${label}`);
+}
+
+function clearMultiStops(){ multiStopIds=[]; multiStopLabels=[]; renderMultiStopList(); setRouteMessage("Multi-stop list cleared"); }
+
+function mergeRouteFeatureCollections(results){
+  const features=[];
+  results.forEach(res=>{
+    const gj=res.width_segments_geojson || res.geojson;
+    if(gj && Array.isArray(gj.features)) features.push(...gj.features);
+    else if(gj && gj.type==="Feature") features.push(gj);
+  });
+  return {type:"FeatureCollection", features};
+}
+
+function findMultiStopCoordinateRoute(costBy){
+  const services=multiStopIds.map(id=>findCurrentServiceById(id));
+  if(services.some(s=>!s || !hasValidServiceCoords(s))){
+    setRouteMessage("One or more selected stops do not have coordinates", true);
+    return;
+  }
+
+  const requests=[];
+  for(let i=0;i<services.length-1;i++){
+    const a=services[i], b=services[i+1];
+    requests.push(fetch("/api/routes/coords/",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        origin_lat:parseFloat(a.latitude), origin_lng:parseFloat(a.longitude),
+        destination_lat:parseFloat(b.latitude), destination_lng:parseFloat(b.longitude),
+        cost_by:costBy
+      })
+    }).then(r=>r.json()));
+  }
+
+  Promise.all(requests).then(results=>{
+    const failed=results.find(r=>!r || !r.success);
+    if(failed){ setRouteMessage(failed.message || "Multi-stop route failed", true); return; }
+
+    const merged={
+      success:true,
+      route_type:"multi_stop",
+      service_ids:[...multiStopIds],
+      stop_count:multiStopIds.length,
+      geojson:mergeRouteFeatureCollections(results),
+      distance_km:results.reduce((a,r)=>a+Number(r.distance_km||0),0).toFixed(2),
+      time_min:results.reduce((a,r)=>a+Number(r.time_min||0),0).toFixed(1),
+      edge_count:results.reduce((a,r)=>a+Number(r.edge_count||0),0),
+      origin_snap_m:results[0].origin_snap_m || 0,
+      destination_snap_m:results[results.length-1].destination_snap_m || 0
+    };
+    drawRoute(merged);
+    setRouteMessage(`Multi-stop: ${merged.stop_count} stops | ${merged.distance_km} km | ${merged.time_min} min`);
+  }).catch(e=>{
+    console.error(e);
+    setRouteMessage("Multi-stop coordinate route API failed", true);
+  });
+}
+
+function findMultiStopRoute(){
+  const costBy=document.getElementById("routeCostBy").value;
+  if(multiStopIds.length<2){ setRouteMessage("Please add at least 2 stops",true); return; }
+  setRouteMessage("Finding multi-stop route...");
+
+  if(!multiStopIds.every(isDatabaseServiceId)){
+    findMultiStopCoordinateRoute(costBy);
+    return;
+  }
+
+  fetch("/api/routes/multi/",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({service_ids:multiStopIds.map(x=>parseInt(x)),cost_by:costBy})})
+    .then(r=>r.json()).then(result=>{
+      if(!result.success){setRouteMessage(result.message||"No multi-stop route found",true);return;}
+      drawRoute(result); setRouteMessage(`Multi-stop: ${result.stop_count} stops | ${result.distance_km} km | ${result.time_min} min`);
+    }).catch(e=>{ console.error(e); setRouteMessage("Multi-stop route API failed",true); });
+}
+
+// ── LOAD SERVICES ──
+function isManualService(s){
+  // Manual Services layer/table me sirf dashboard se manually added services dikhengi.
+  // Existing API/GIS layers (Govt Hospital, Private Hospital, School, College, Petrol Pump, etc.)
+  // apne separate layer buttons se hi show/hide honge.
+  let meta = s && s.metadata;
+  if (typeof meta === "string") {
+    try { meta = JSON.parse(meta); } catch(e) { meta = {}; }
+  }
+  meta = meta || {};
+  return meta.source === "dashboard_manual";
+}
+function loadServices(autoFocusManual=false){
+  // Route Planner ko hamesha ALL services chahiye, filters se independent.
+  // Isse manual services + API se saved services origin/destination dropdown me aa jati hain.
+  refreshRouteServices();
+
+  // Service Management table/markers filters ke according rahenge.
+  fetch(getServiceFilterUrl()).then(r=>r.json()).then(services=>{
+    const filteredServices=Array.isArray(services)?services:[];
+
+    // Service Management table should show only manually added services
+    const manualServices = filteredServices.filter(isManualService);
+
+    const tbody=document.getElementById("serviceTableBody");
+    tbody.innerHTML="";
+
+    if(!manualServices.length){
+      tbody.innerHTML='<tr><td colspan="4" style="color:var(--text-dim)">No manually added services found</td></tr>';
+      removeManualServiceMarkers();
+      setStatus(`0 manual service(s) found`);
+      return;
+    }
+
+    manualServices.forEach(s=>{
+      const row=document.createElement("tr");
+      row.innerHTML=`<td>${escapeHtml(s.name)}</td><td>${escapeHtml(serviceTypeLabel(s.type))}</td><td>${escapeHtml(s.region||"")}</td><td><button class="action-btn edit-btn">Edit</button><button class="action-btn delete-btn">Del</button></td>`;
+
+      row.querySelector(".edit-btn").addEventListener("click",()=>{
+        document.getElementById("toggleManualServices").checked=true;
+        openServiceEditModal(s, manualServices);
+      });
+
+      row.querySelector(".delete-btn").addEventListener("click",()=>deleteService(s.id));
+      tbody.appendChild(row);
+    });
+
+    addManualServiceMarkers(manualServices);
+    if(autoFocusManual){
+      fitManualServiceMarkers();
+    }
+    setStatus(`${manualServices.length} manual service(s) shown`);
+  }).catch(e=>{ console.error(e); setServiceMessage("Failed to load services",true); });
+}
+
+function deleteService(id){
+  if(!confirm("Delete this service?")) return;
+  fetch(`/api/services/${id}/`,{method:"DELETE"}).then(r=>r.json()).then(data=>{
+    if(data.error){setServiceMessage(data.error,true);return;}
+    setServiceMessage("Service deleted"); clearServiceForm(); loadServices();
+  }).catch(e=>{ console.error(e); setServiceMessage("Delete failed",true); });
+}
+
+
+// ── SERVICE EDIT POPUP ──
+let serviceEditOriginal = null;
+let serviceEditManualList = [];
+
+function setEditServiceMessage(msg, isError=false){
+  const el=document.getElementById("editServiceMessage");
+  if(!el) return;
+  el.textContent=msg || "";
+  el.className="service-edit-msg " + (isError ? "error" : "ok");
+}
+
+function openServiceEditModal(s, manualServices){
+  serviceEditOriginal = {...s};
+  serviceEditManualList = manualServices || [];
+
+  document.getElementById("editServiceId").value=s.id;
+  document.getElementById("editServiceName").value=s.name || "";
+  document.getElementById("editServiceType").value=s.type || "other";
+  document.getElementById("editServiceRegion").value=s.region || "";
+  document.getElementById("editServiceCountry").value=s.country || "";
+  document.getElementById("editServiceLatitude").value=Number(s.latitude).toFixed(6);
+  document.getElementById("editServiceLongitude").value=Number(s.longitude).toFixed(6);
+
+  fillServiceForm(s);
+  document.getElementById("toggleManualServices").checked=true;
+  addManualServiceMarkers(serviceEditManualList);
+  enableMarkerEdit(s.id);
+
+  document.getElementById("serviceEditModal").style.display="block";
+  map.setView([s.latitude,s.longitude],16);
+
+  setEditServiceMessage("Edit popup opened. Change fields, drag marker if needed, then click Apply Changes.");
+  setServiceMessage("Edit popup opened. Green marker can be dragged, but changes save only after Apply Changes.");
+}
+
+function closeServiceEditModal(){
+  const modal=document.getElementById("serviceEditModal");
+  if(modal) modal.style.display="none";
+  setEditServiceMessage("");
+}
+
+function cancelServiceEditModal(){
+  closeServiceEditModal();
+  lockServiceEdit();
+  loadServices();
+  setServiceMessage("Edit cancelled. No changes saved.");
+}
+
+function getEditServicePayload(){
+  return {
+    name:document.getElementById("editServiceName").value.trim(),
+    type:document.getElementById("editServiceType").value,
+    region:document.getElementById("editServiceRegion").value.trim(),
+    country:document.getElementById("editServiceCountry").value.trim(),
+    latitude:parseFloat(document.getElementById("editServiceLatitude").value),
+    longitude:parseFloat(document.getElementById("editServiceLongitude").value),
+    metadata:{source:"dashboard_manual"}
+  };
+}
+
+function updateEditModalCoords(id, lat, lng){
+  const modalId=document.getElementById("editServiceId");
+  if(modalId && String(modalId.value)===String(id)){
+    document.getElementById("editServiceLatitude").value=lat.toFixed(6);
+    document.getElementById("editServiceLongitude").value=lng.toFixed(6);
+    document.getElementById("serviceLatitude").value=lat.toFixed(6);
+    document.getElementById("serviceLongitude").value=lng.toFixed(6);
+    setEditServiceMessage("Location changed in popup. Click Apply Changes to save.");
+  }
+}
+
+function applyServiceEditModal(){
+  const id=document.getElementById("editServiceId").value;
+  const p=getEditServicePayload();
+
+  if(!id){setEditServiceMessage("Service ID missing",true);return;}
+  if(!p.name||!p.type||isNaN(p.latitude)||isNaN(p.longitude)){
+    setEditServiceMessage("Name, type, latitude and longitude are required",true);
+    return;
+  }
+
+  fetch(`/api/services/${id}/`,{
+    method:"PATCH",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(p)
+  })
+  .then(r=>r.json())
+  .then(data=>{
+    if(data.error){setEditServiceMessage(data.error,true);return;}
+    closeServiceEditModal();
+    lockServiceEdit();
+    document.getElementById("toggleManualServices").checked=true;
+    setServiceMessage("Service updated successfully");
+    loadServices();
+  })
+  .catch(e=>{
+    console.error(e);
+    setEditServiceMessage("Apply changes failed",true);
+  });
+}
+
+function editUseMapCenter(){
+  const c=map.getCenter();
+  document.getElementById("editServiceLatitude").value=c.lat.toFixed(6);
+  document.getElementById("editServiceLongitude").value=c.lng.toFixed(6);
+  document.getElementById("serviceLatitude").value=c.lat.toFixed(6);
+  document.getElementById("serviceLongitude").value=c.lng.toFixed(6);
+  setEditServiceMessage("Map center added. Click Apply Changes to save.");
+}
+
+function editEnableDrag(){
+  const id=document.getElementById("editServiceId").value;
+  if(!id){setEditServiceMessage("Select service first",true);return;}
+  enableMarkerEdit(id);
+  setEditServiceMessage("Drag mode ON. Move green marker; lat/lng will update live. Then Apply Changes.");
+  setServiceMessage("Drag green marker. Changes are not saved until Apply Changes.");
+}
+
+function editPickFromMap(){
+  const modal=document.getElementById("serviceEditModal");
+  modal.style.display="none";
+
+  setServiceMessage("Pick mode ON: click map location for this service.");
+  setStatus("Click map to pick service edit location");
+
+  if(window.editServicePickHandler){
+    document.removeEventListener("click", window.editServicePickHandler, true);
+    window.editServicePickHandler=null;
+  }
+
+  window.editServicePickHandler=function(ev){
+    if(ev.target.closest(".dropdown-panel") || ev.target.closest(".sidebar")){
+      return;
+    }
+
+    ev.preventDefault();
+    ev.stopPropagation();
+
+    const latlng=map.mouseEventToLatLng(ev);
+    const ok=confirm(`Use this location?\nLat: ${latlng.lat.toFixed(6)}\nLng: ${latlng.lng.toFixed(6)}`);
+
+    document.removeEventListener("click", window.editServicePickHandler, true);
+    window.editServicePickHandler=null;
+    modal.style.display="block";
+
+    if(!ok){
+      setEditServiceMessage("Map pick cancelled. No location changed.", true);
+      return;
+    }
+
+    document.getElementById("editServiceLatitude").value=latlng.lat.toFixed(6);
+    document.getElementById("editServiceLongitude").value=latlng.lng.toFixed(6);
+    document.getElementById("serviceLatitude").value=latlng.lat.toFixed(6);
+    document.getElementById("serviceLongitude").value=latlng.lng.toFixed(6);
+
+    setEditServiceMessage("Location picked from map. Click Apply Changes to save.");
+    setServiceMessage("Edit location picked. Apply Changes required.");
+  };
+
+  setTimeout(()=>document.addEventListener("click", window.editServicePickHandler, true),200);
+}
+
+
+function saveService(){
+  const id=document.getElementById("serviceId").value, p=getServiceFormData();
+  if(!p.name||!p.type||isNaN(p.latitude)||isNaN(p.longitude)){ setServiceMessage("Name, type, latitude and longitude are required",true); return; }
+  const url=id?`/api/services/${id}/`:"/api/services/add/", method=id?"PATCH":"POST";
+  fetch(url,{method,headers:{"Content-Type":"application/json"},body:JSON.stringify(p)}).then(r=>r.json()).then(data=>{
+    if(data.error){setServiceMessage(data.error,true);return;}
+    setServiceMessage(id?"Service updated":"Service added"); clearServiceForm();
+    document.getElementById("toggleManualServices").checked=true; loadServices(true);
+  }).catch(e=>{ console.error(e); setServiceMessage("Save failed",true); });
+}
+
+function useMapCenterForService(){
+  const c=map.getCenter();
+  document.getElementById("serviceLatitude").value=c.lat.toFixed(6);
+  document.getElementById("serviceLongitude").value=c.lng.toFixed(6);
+  setServiceMessage("Map center coordinates added to form");
+}
+
+// ── MAP CONTROLS ──
+function focusChandigarh(){ map.setView([30.7333,76.7794],12); setStatus("Focused on Chandigarh"); }
+
+function clearMapLayers(){
+  Object.keys(layerDefs).forEach(k=>hideLayer(k));
+  if(hospitalBufferLayer&&map.hasLayer(hospitalBufferLayer)) map.removeLayer(hospitalBufferLayer);
+  hospitalBufferLayer=null;
+  document.getElementById("hospitalType").value="none";
+  document.getElementById("bufferKm").value="none";
+  document.getElementById("petrolBufferKm").value="none";
+  ["toggleSectorPetrol","toggleVillagePetrol","togglePetrolPumps","toggleSchools","toggleColleges","toggleRoads",
+   "togglePoliceStations","toggleRailwayStations","toggleBusStands","toggleManualServices","toggleVillages","toggleSectors","toggleVillageHospital","toggleVillageSchool","toggleVillageCollege",
+   "toggleSectorHospital","toggleSectorSchool","toggleSectorCollege"].forEach(id=>{
+     const el=document.getElementById(id);
+     if(el) el.checked=false;
+   });
+  removeManualServiceMarkers();
+  document.getElementById("toggleBoundary").checked=true;
+  document.getElementById("toggleSectorBoundary").checked=true;
+  showLayer("boundary"); showLayer("sectorBoundary");
+  clearRoute(); clearCoordPoints();
+  setStatus("Map layers cleared. Boundaries kept ON");
+}
+
+function initializeVisibleLayersFromUI(){
+  const map2={toggleSectorPetrol:"sectorPetrol",toggleVillagePetrol:"villagePetrol",togglePetrolPumps:"petrolPumps",
+    toggleSchools:"schools",toggleColleges:"colleges",toggleRoads:"roads",
+    toggleVillages:"villages",toggleUncovered:"uncovered",toggleSectors:"sectors",
+    toggleBoundary:"boundary",toggleSectorBoundary:"sectorBoundary",toggleVillageHospital:"villageHospital",
+    toggleVillageSchool:"villageSchool",toggleVillageCollege:"villageCollege",toggleSectorHospital:"sectorHospital",
+    toggleSectorSchool:"sectorSchool",toggleSectorCollege:"sectorCollege"};
+  Object.keys(map2).forEach(id=>{ const el=document.getElementById(id); if(el&&el.checked) showLayer(map2[id]); });
+  const manual=document.getElementById("toggleManualServices"); if(manual&&manual.checked) syncManualMarkersVisibility();
+  const hospital=document.getElementById("hospitalType"); if(hospital&&hospital.value!=="none") updateHospitalVisibility();
+  const buffer=document.getElementById("bufferKm"); if(buffer&&buffer.value!=="none") updateBufferLayer();
+  const pb=document.getElementById("petrolBufferKm"); if(pb&&pb.value!=="none") updatePetrolPumpBufferLayer();
+}
+
+// ── SAVED ROUTES ──
+let savedRoutesLayerGlobal=null;
+
+function removeAllSavedRouteLayers(){
+  if(savedRoutesLayerGlobal&&map.hasLayer(savedRoutesLayerGlobal)) map.removeLayer(savedRoutesLayerGlobal);
+  savedRoutesLayerGlobal=null;
+}
+
+function loadSavedRoutes(){
+  removeAllSavedRouteLayers();
+  setStatus("Loading saved routes...");
+  fetch("/api/route-cache/")
+    .then(r=>r.json())
+    .then(data=>{
+      savedRoutesLayerGlobal=L.geoJSON(data,{
+        style: function(feature){
+          const p=feature.properties||{};
+          if(p.route_type==="service") return {color:"#7c3aed",weight:5,opacity:0.9};
+          if(p.route_type==="multi_stop") return {color:"#f59e0b",weight:6,opacity:0.95,dashArray:"10 6"};
+          return {color:"#3b82f6",weight:5,opacity:0.9,dashArray:"8 5"};
+        },
+        onEachFeature: function(feature,layer){
+          const p=feature.properties||{};
+          layer.bindPopup(`<b>Saved Route #${p.id||"-"}</b><br><b>Type:</b> ${p.route_type||"-"}<br><b>Cost By:</b> ${p.cost_by||"-"}<br><b>Distance:</b> ${p.distance_km||"-"} km<br><b>Time:</b> ${p.time_min||"-"} min<br><b>Edges:</b> ${p.edge_count||"-"}<br><b>Origin:</b> ${p.origin_service_id||"-"}<br><b>Destination:</b> ${p.destination_service_id||"-"}<br><b>Saved At:</b> ${p.created_at||"-"}`);
+        }
+      }).addTo(map);
+      if(savedRoutesLayerGlobal.getLayers().length>0) map.fitBounds(savedRoutesLayerGlobal.getBounds(),{padding:[30,30]});
+      setStatus("Saved routes visible");
+    })
+    .catch(err=>{ console.error(err); setStatus("Saved routes failed"); });
+}
+
+function hideSavedRoutes(){
+  removeAllSavedRouteLayers();
+  const cb=document.getElementById("toggleSavedRoutesDirect"); if(cb) cb.checked=false;
+  setStatus("Saved routes hidden");
+}
+
+// ── EVENT LISTENERS ──
+document.getElementById("hospitalType").addEventListener("change",updateHospitalVisibility);
+document.getElementById("bufferKm").addEventListener("change",updateBufferLayer);
+document.getElementById("petrolBufferKm").addEventListener("change",updatePetrolPumpBufferLayer);
+
+bindCheckbox("togglePetrolPumps","petrolPumps"); bindCheckbox("toggleSectorPetrol","sectorPetrol");
+bindCheckbox("toggleVillagePetrol","villagePetrol"); bindCheckbox("toggleSchools","schools");
+bindCheckbox("toggleColleges","colleges"); bindCheckbox("toggleRoads","roads");
+bindCheckbox("togglePoliceStations","policeStations");
+bindCheckbox("toggleRailwayStations","railwayStations");
+bindCheckbox("toggleBusStands","busStands");
+
+
+
+bindCheckbox("toggleVillages","villages");
+bindCheckbox("toggleUncovered","uncovered"); bindCheckbox("toggleSectors","sectors");
+bindCheckbox("toggleBoundary","boundary"); bindCheckbox("toggleSectorBoundary","sectorBoundary");
+bindCheckbox("toggleVillageHospital","villageHospital"); bindCheckbox("toggleVillageSchool","villageSchool");
+bindCheckbox("toggleVillageCollege","villageCollege"); bindCheckbox("toggleSectorHospital","sectorHospital");
+bindCheckbox("toggleSectorSchool","sectorSchool"); bindCheckbox("toggleSectorCollege","sectorCollege");
+document.getElementById("toggleManualServices").addEventListener("change",function(){
+  if(this.checked){
+    loadServices(true);
+  }else{
+    syncManualMarkersVisibility();
+  }
+});
+
+if(!window.servicePickMapHandlerBound){
+  map.on("click", handleServiceLocationPick);
+  window.servicePickMapHandlerBound = true;
+}
+
+document.getElementById("saveServiceBtn").addEventListener("click",saveService);
+document.getElementById("clearServiceBtn").addEventListener("click",clearServiceForm);
+document.getElementById("lockServiceBtn").addEventListener("click",lockServiceEdit);
+document.getElementById("useMapCenterBtn").addEventListener("click",()=>{
+  useMapCenterForService();
+  flashServiceButton("useMapCenterBtn","Location Added");
+});
+document.getElementById("pickServiceMapBtn").addEventListener("click",pickServiceLocationFromMap);
+
+document.getElementById("editServiceCloseBtn").addEventListener("click",cancelServiceEditModal);
+document.getElementById("editCancelBtn").addEventListener("click",cancelServiceEditModal);
+document.getElementById("editApplyBtn").addEventListener("click",applyServiceEditModal);
+document.getElementById("editUseMapCenterBtn").addEventListener("click",editUseMapCenter);
+document.getElementById("editPickMapBtn").addEventListener("click",editPickFromMap);
+document.getElementById("editEnableDragBtn").addEventListener("click",editEnableDrag);
+document.getElementById("fitChandigarhBtn").addEventListener("click",focusChandigarh);
+document.getElementById("clearMapBtn").addEventListener("click",clearMapLayers);
+document.getElementById("findRouteBtn").addEventListener("click",findRoute);
+document.getElementById("clearRouteBtn").addEventListener("click",clearRoute);
+document.getElementById("setOriginClickBtn").addEventListener("click",()=>setRouteClickMode("origin"));
+document.getElementById("setDestinationClickBtn").addEventListener("click",()=>setRouteClickMode("destination"));
+document.getElementById("findCoordRouteBtn").addEventListener("click",findCoordRoute);
+document.getElementById("clearCoordPointsBtn").addEventListener("click",clearCoordPoints);
+document.getElementById("addMultiStopBtn").addEventListener("click",addMultiStop);
+document.getElementById("clearMultiStopsBtn").addEventListener("click",clearMultiStops);
+document.getElementById("findMultiStopRouteBtn").addEventListener("click",findMultiStopRoute);
+["routeOriginService","routeDestinationService","multiStopServiceSelect"].forEach(id=>{
+  const el=document.getElementById(id);
+  if(el) el.addEventListener("focus", refreshRouteServices);
+});
+document.querySelectorAll('[data-panel="panel-route"]').forEach(el=>{
+  el.addEventListener("click", refreshRouteServices);
+});
+
+function shouldSkipAutoRoadInfo(){
+  return Boolean(
+    routeClickMode ||
+    pendingRouteClickHandler ||
+    roadBlockClickHandler ||
+    roadInfoClickHandler ||
+    document.body.classList.contains("route-clicking") ||
+    window.servicePickDocumentHandler ||
+    window.editServicePickHandler
+  );
+}
+
+function handleDefaultRoadInfoClick(e){
+  if(shouldSkipAutoRoadInfo()) return;
+
+  const target = e.originalEvent && e.originalEvent.target;
+  if(target && target.closest && target.closest(".leaflet-control")) return;
+
+  showRoadInfoAt(e.latlng);
+}
+
+if(!window.autoRoadInfoClickEnabled){
+  map.on("click", handleDefaultRoadInfoClick);
+  window.autoRoadInfoClickEnabled = true;
+}
+
+const roadBlockBtn=document.getElementById("roadBlockModeBtn");
+const roadUnblockBtn=document.getElementById("roadUnblockModeBtn");
+if(roadBlockBtn) roadBlockBtn.addEventListener("click",()=>setRoadBlockMode(false));
+if(roadUnblockBtn) roadUnblockBtn.addEventListener("click",()=>setRoadBlockMode(true));
+
+// Saved routes panel
+(function(){
+  const cb=document.getElementById("toggleSavedRoutesDirect");
+  const rb=document.getElementById("refreshSavedRoutesDirect");
+  if(cb){ cb.addEventListener("change",function(){ if(this.checked) loadSavedRoutes(); else hideSavedRoutes(); }); }
+  if(rb){ rb.addEventListener("click",function(){ if(cb) cb.checked=true; loadSavedRoutes(); }); }
+})();
+
+// ── INIT ──
+loadServices();
+setTimeout(()=>{ map.invalidateSize(); focusChandigarh(); initializeVisibleLayersFromUI(); }, 500);
+</script>
+
+
+<script>
+/* ── CHANDIGARH OUTSIDE BOUNDARY MASK ── */
+(function () {
+  function geoJsonToHoleRings(geojson) {
+    const holes = [];
+
+    function addGeometry(geom) {
+      if (!geom || !geom.type || !geom.coordinates) return;
+
+      if (geom.type === "Polygon") {
+        // first ring is outer boundary
+        if (geom.coordinates[0]) {
+          holes.push(geom.coordinates[0].map(function (pt) {
+            return [pt[1], pt[0]];
+          }));
+        }
+      }
+
+      if (geom.type === "MultiPolygon") {
+        geom.coordinates.forEach(function (poly) {
+          if (poly[0]) {
+            holes.push(poly[0].map(function (pt) {
+              return [pt[1], pt[0]];
+            }));
+          }
+        });
+      }
+    }
+
+    if (geojson.type === "FeatureCollection") {
+      geojson.features.forEach(function (f) {
+        addGeometry(f.geometry);
+      });
+    } else if (geojson.type === "Feature") {
+      addGeometry(geojson.geometry);
+    } else {
+      addGeometry(geojson);
+    }
+
+    return holes;
+  }
+
+  function addChandigarhOutsideMask() {
+    if (typeof map === "undefined" || !window.L) return;
+
+    if (window.chandigarhOutsideMaskLayer) {
+      map.removeLayer(window.chandigarhOutsideMaskLayer);
+    }
+
+    if (!map.getPane("outsideMaskPane")) {
+      map.createPane("outsideMaskPane");
+      map.getPane("outsideMaskPane").style.zIndex = 330;
+      map.getPane("outsideMaskPane").style.pointerEvents = "none";
+    }
+
+    fetch("/api/chandigarh-boundary/")
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        const worldRing = [
+          [-90, -180],
+          [-90, 180],
+          [90, 180],
+          [90, -180],
+          [-90, -180]
+        ];
+
+        const holes = geoJsonToHoleRings(data);
+
+        if (!holes.length) {
+          console.warn("Chandigarh boundary not found for outside mask.");
+          return;
+        }
+
+        window.chandigarhOutsideMaskLayer = L.polygon([worldRing].concat(holes), {
+          pane: "outsideMaskPane",
+          stroke: false,
+          fillColor: "#020617",
+          fillOpacity: 0.72,
+          interactive: false
+        }).addTo(map);
+      })
+      .catch(function (err) {
+        console.warn("Outside boundary mask failed:", err);
+      });
+  }
+
+  setTimeout(addChandigarhOutsideMask, 1200);
+})();
+</script>
+
+
+<script>
+/* ── CHANDIGARH MAP LOCK + CLEAR BOUNDARY OUTLINE ── */
+(function () {
+  function lockMapToChandigarh() {
+    if (typeof map === "undefined" || !window.L) return;
+
+    fetch("/api/chandigarh-boundary/")
+      .then(function (res) { return res.json(); })
+      .then(function (data) {
+        if (!data) return;
+
+        if (!map.getPane("chdLockBoundaryPane")) {
+          map.createPane("chdLockBoundaryPane");
+          map.getPane("chdLockBoundaryPane").style.zIndex = 690;
+          map.getPane("chdLockBoundaryPane").style.pointerEvents = "none";
+        }
+
+        if (window.chdLockBoundaryLayer) {
+          map.removeLayer(window.chdLockBoundaryLayer);
+        }
+
+        window.chdLockBoundaryLayer = L.geoJSON(data, {
+          pane: "chdLockBoundaryPane",
+          interactive: false,
+          style: {
+            color: "#38bdf8",
+            weight: 3,
+            opacity: 1,
+            fill: false,
+            dashArray: "8 6"
+          }
+        }).addTo(map);
+
+        const bounds = window.chdLockBoundaryLayer.getBounds();
+
+        if (bounds && bounds.isValid && bounds.isValid()) {
+          map.fitBounds(bounds, {
+            padding: [35, 35],
+            animate: false
+          });
+
+          // Chandigarh ke bahar drag/pan lock
+          map.setMaxBounds(bounds.pad(0.18));
+          map.options.maxBoundsViscosity = 1.0;
+
+          // Bahut zyada zoom out na ho
+          if (map.getZoom() < 11) {
+            map.setZoom(11);
+          }
+          map.setMinZoom(11);
+        }
+      })
+      .catch(function (err) {
+        console.warn("Chandigarh lock failed:", err);
+      });
+  }
+
+  setTimeout(lockMapToChandigarh, 1600);
+})();
+</script>
+
+
+<script>
+/* ── SERVICE LAYER AUTO-CLEAR CONFIRMATION ── */
+(function(){
+  /*
+    Purpose:
+    Map par bahut saari service layers ek saath ON hone se map cluttered ho jata hai.
+    Isliye jab user ek new service layer ON karega, aur koi service layer already visible hogi,
+    to confirmation aayega. OK par old service layers auto OFF ho jayengi.
+
+    Boundary layers ko intentionally exclude rakha hai:
+    - Chandigarh Boundary
+    - Sector Boundary
+  */
+
+  const exclusiveServiceLayers = [
+    {id:"toggleSchools", label:"Schools"},
+    {id:"toggleColleges", label:"Colleges"},
+    {id:"toggleRoads", label:"Roads"},
+    {id:"togglePoliceStations", label:"Police Stations"},
+    {id:"toggleRailwayStations", label:"Railway Stations"},
+    {id:"toggleBusStands", label:"Bus Stands"},
+    {id:"toggleManualServices", label:"Manual Services"},
+    {id:"toggleVillages", label:"Villages"},
+    {id:"toggleUncovered", label:"Uncovered Villages"},
+    {id:"toggleSectors", label:"Sectors"},
+
+    // Agar ye IDs page me present hain to ye bhi auto-manage honge
+    {id:"toggleGovtHospitals", label:"Government Hospitals"},
+    {id:"togglePrivateHospitals", label:"Private Hospitals"},
+    {id:"toggleHospitals", label:"Hospitals"},
+    {id:"toggleHospitalBuffers", label:"Hospital Buffers"},
+    {id:"togglePetrolPumps", label:"Petrol Pumps"},
+    {id:"togglePetrolPumpBuffers", label:"Petrol Pump Buffers"}
+  ];
+
+  function getLayerConfigById(id){
+    return exclusiveServiceLayers.find(item => item.id === id);
+  }
+
+  function getCheckedOtherLayers(currentId){
+    return exclusiveServiceLayers.filter(item => {
+      if(item.id === currentId) return false;
+
+      const el = document.getElementById(item.id);
+      return el && el.checked;
+    });
+  }
+
+  function turnOffOtherLayers(currentId){
+    exclusiveServiceLayers.forEach(item => {
+      if(item.id === currentId) return;
+
+      const el = document.getElementById(item.id);
+      if(el && el.checked){
+        el.checked = false;
+
+        /*
+          Existing bindCheckbox/listener ko trigger karne ke liye change event dispatch kar rahe hain.
+          Isse old layer map se properly remove ho jayegi.
+        */
+        el.dispatchEvent(new Event("change", {bubbles:true}));
+      }
+    });
+  }
+
+  document.addEventListener("change", function(e){
+    const target = e.target;
+
+    if(!target || !target.matches || !target.matches("input[type='checkbox']")){
+      return;
+    }
+
+    const selectedLayer = getLayerConfigById(target.id);
+
+    if(!selectedLayer){
+      return;
+    }
+
+    // Sirf ON karte time alert chahiye, OFF karte time nahi
+    if(!target.checked){
+      return;
+    }
+
+    const alreadyVisibleLayers = getCheckedOtherLayers(target.id);
+
+    if(alreadyVisibleLayers.length === 0){
+      return;
+    }
+
+    const visibleNames = alreadyVisibleLayers.map(item => item.label).join(", ");
+
+    const ok = confirm(
+      selectedLayer.label + " layer map par show karni hai?\n\n" +
+      "Abhi visible layer(s): " + visibleNames + "\n\n" +
+      "OK karne par ye visible service layers map se automatically remove ho jayengi."
+    );
+
+    if(!ok){
+      target.checked = false;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      return false;
+    }
+
+    turnOffOtherLayers(target.id);
+  }, true);
+})();
+</script>
+
+</body>
+</html>
